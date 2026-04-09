@@ -9,331 +9,42 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
     
-    <!-- TweetNaCl untuk enkripsi end-to-end -->
+    <!-- TweetNaCl -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js"></script>
     
     <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-html, body {
-    height: 100%;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #0a0a0a;
-}
-
-.app {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    background: #efeae2;
-}
-
-/* Header hijau WhatsApp */
-.whats-header {
-    background: #075e54;
-    padding: 12px 16px;
-    padding-top: max(12px, env(safe-area-inset-top));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-    color: white;
-    flex-shrink: 0;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.brand .logo { font-size: 24px; }
-.brand h1 { font-size: 1.2rem; font-weight: 600; }
-
-.header-right {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-.status-badge {
-    background: rgba(255,255,255,0.2);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 500;
-}
-.encrypt-badge {
-    background: #25d36620;
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 0.65rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #dcf8c5;
-}
-
-/* Panel join */
-.join-panel {
-    background: #ffffffdd;
-    backdrop-filter: blur(12px);
-    padding: 12px 16px;
-    border-bottom: 1px solid #e9edef;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: flex-end;
-    flex-shrink: 0;
-}
-.input-group {
-    flex: 1;
-    min-width: 120px;
-}
-.input-group label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #54656f;
-    display: block;
-    margin-bottom: 4px;
-}
-.input-group input {
-    width: 100%;
-    background: white;
-    border: 1px solid #e9edef;
-    border-radius: 24px;
-    padding: 10px 16px;
-    font-size: 0.9rem;
-    outline: none;
-}
-.input-group input:focus { border-color: #25d366; }
-button {
-    background: #075e54;
-    border: none;
-    border-radius: 30px;
-    padding: 10px 20px;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: white;
-    cursor: pointer;
-}
-button:active { transform: scale(0.96); }
-.btn-outline {
-    background: #e9edef;
-    color: #075e54;
-}
-
-/* Partisipan */
-.participants-strip {
-    background: #ffffffcc;
-    backdrop-filter: blur(8px);
-    padding: 8px 16px;
-    overflow-x: auto;
-    white-space: nowrap;
-    border-bottom: 1px solid #e9edef;
-    flex-shrink: 0;
-}
-.participants-strip span {
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: #54656f;
-    margin-right: 12px;
-}
-.user-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: white;
-    border-radius: 30px;
-    padding: 4px 12px 4px 6px;
-    margin-right: 8px;
-    font-size: 0.75rem;
-    border: 1px solid #e9edef;
-    cursor: pointer;
-}
-.user-chip.active {
-    background: #dcf8c5;
-    border-color: #25d366;
-}
-.avatar {
-    width: 28px;
-    height: 28px;
-    background: #25d366;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 0.7rem;
-    color: white;
-}
-
-/* Area chat — scroll di sini saja */
-.chat-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background-image: radial-gradient(circle at 10% 30%, rgba(0,0,0,0.02) 2%, transparent 2.5%);
-    background-size: 28px 28px;
-}
-
-.message {
-    display: flex;
-    flex-direction: column;
-    max-width: 80%;
-    animation: fadeIn 0.2s ease;
-}
-.message.own {
-    align-items: flex-end;
-    margin-left: auto;
-}
-.bubble {
-    padding: 8px 12px;
-    border-radius: 18px;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    word-break: break-word;
-}
-.message:not(.own) .bubble {
-    background: white;
-    border-top-left-radius: 4px;
-    color: #111;
-    box-shadow: 0 1px 0.5px rgba(0,0,0,0.05);
-}
-.message.own .bubble {
-    background: #dcf8c5;
-    border-bottom-right-radius: 4px;
-    color: #111;
-}
-.meta {
-    font-size: 0.65rem;
-    color: #667781;
-    margin: 4px 8px 0;
-    display: flex;
-    gap: 6px;
-}
-.empty-chat {
-    text-align: center;
-    margin-top: 50px;
-    color: #8696a0;
-    font-size: 0.9rem;
-}
-
-/* Input bawah */
-.input-bar {
-    background: #f0f2f5;
-    padding: 10px 16px;
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
-    border-top: 1px solid #e9edef;
-    flex-shrink: 0;
-}
-.message-form {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-.message-input {
-    flex: 1;
-    background: white;
-    border: none;
-    border-radius: 30px;
-    padding: 10px 16px;
-    font-size: 0.9rem;
-    outline: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-.message-input:disabled {
-    background: #f0f2f5;
-}
-.send-btn {
-    background: #075e54;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    padding: 0;
-}
-
-/* Footer */
-.info-footer {
-    background: #e9edef;
-    font-size: 0.6rem;
-    padding: 6px 12px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
-    text-align: center;
-    color: #54656f;
-    border-top: 1px solid #cfd4d8;
-    flex-shrink: 0;
-}
-details summary {
-    cursor: pointer;
-    color: #075e54;
-    font-weight: 500;
-}
-pre {
-    font-size: 0.55rem;
-    background: #fff;
-    padding: 8px;
-    border-radius: 12px;
-    overflow-x: auto;
-    margin-top: 6px;
-    text-align: left;
-    color: #111;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-::-webkit-scrollbar {
-    width: 5px;
-}
-::-webkit-scrollbar-track {
-    background: #e9edef;
-}
-::-webkit-scrollbar-thumb {
-    background: #b9c4cc;
-    border-radius: 5px;
-}
+        html, body {
+            height: 100%;
+            background: #0a0a0a;
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #0a0a0a;
-            min-height: 100vh;
-            overflow-y: auto;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        /* Container utama seperti WhatsApp Web */
+        /* Container utama menggunakan 100dvh untuk menangani toolbar dinamis */
         .app {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100dvh;
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
-            background: #efeae2;  /* background chat ala WhatsApp */
-            position: relative;
+            background: #efeae2;
+            overflow: hidden;
         }
 
-        /* Header hijau khas WhatsApp */
+        /* Header hijau WhatsApp */
         .whats-header {
             background: #075e54;
             padding: 12px 16px;
@@ -347,18 +58,15 @@ pre {
             flex-shrink: 0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
+
         .brand {
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        .brand .logo {
-            font-size: 24px;
-        }
-        .brand h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
+        .brand .logo { font-size: 24px; }
+        .brand h1 { font-size: 1.2rem; font-weight: 600; }
+
         .header-right {
             display: flex;
             gap: 12px;
@@ -382,7 +90,7 @@ pre {
             color: #dcf8c5;
         }
 
-        /* Panel masuk room */
+        /* Panel join */
         .join-panel {
             background: #ffffffdd;
             backdrop-filter: blur(12px);
@@ -413,11 +121,8 @@ pre {
             padding: 10px 16px;
             font-size: 0.9rem;
             outline: none;
-            transition: 0.2s;
         }
-        .input-group input:focus {
-            border-color: #25d366;
-        }
+        .input-group input:focus { border-color: #25d366; }
         button {
             background: #075e54;
             border: none;
@@ -427,7 +132,6 @@ pre {
             font-size: 0.8rem;
             color: white;
             cursor: pointer;
-            transition: 0.2s;
         }
         button:active { transform: scale(0.96); }
         .btn-outline {
@@ -435,7 +139,7 @@ pre {
             color: #075e54;
         }
 
-        /* Daftar partisipan (seperti info grup) */
+        /* Partisipan */
         .participants-strip {
             background: #ffffffcc;
             backdrop-filter: blur(8px);
@@ -462,7 +166,6 @@ pre {
             font-size: 0.75rem;
             border: 1px solid #e9edef;
             cursor: pointer;
-            transition: 0.1s;
         }
         .user-chip.active {
             background: #dcf8c5;
@@ -481,10 +184,9 @@ pre {
             color: white;
         }
 
-        /* Area chat seperti WhatsApp */
+        /* Area chat — scroll di sini saja */
         .chat-area {
-            flex: 1 1 0;
-            min-height: 0;
+            flex: 1;
             overflow-y: auto;
             padding: 16px 12px;
             display: flex;
@@ -492,7 +194,9 @@ pre {
             gap: 8px;
             background-image: radial-gradient(circle at 10% 30%, rgba(0,0,0,0.02) 2%, transparent 2.5%);
             background-size: 28px 28px;
+            min-height: 0; /* penting agar flex child bisa scroll */
         }
+
         .message {
             display: flex;
             flex-direction: column;
@@ -509,7 +213,6 @@ pre {
             font-size: 0.9rem;
             line-height: 1.4;
             word-break: break-word;
-            position: relative;
         }
         .message:not(.own) .bubble {
             background: white;
@@ -536,7 +239,7 @@ pre {
             font-size: 0.9rem;
         }
 
-        /* Input bawah ala WhatsApp */
+        /* Input bawah */
         .input-bar {
             background: #f0f2f5;
             padding: 10px 16px;
@@ -574,7 +277,7 @@ pre {
             padding: 0;
         }
 
-        /* Footer panduan mini */
+        /* Footer */
         .info-footer {
             background: #e9edef;
             font-size: 0.6rem;
@@ -620,7 +323,7 @@ pre {
 </head>
 <body>
 <div class="app">
-    <!-- Header WhatsApp hijau -->
+    <!-- Header -->
     <div class="whats-header">
         <div class="brand">
             <span class="logo">💬</span>
@@ -632,7 +335,7 @@ pre {
         </div>
     </div>
 
-    <!-- Panel join room -->
+    <!-- Panel join -->
     <div class="join-panel">
         <div class="input-group">
             <label>Nama kamu</label>
@@ -646,7 +349,7 @@ pre {
         <button id="genRoomBtn" class="btn-outline">Acak Room</button>
     </div>
 
-    <!-- Daftar partisipan online -->
+    <!-- Partisipan -->
     <div class="participants-strip" id="participantsStrip">
         <span>📱 Partisipan:</span>
         <span style="color:#8696a0;">— tidak ada —</span>
@@ -660,7 +363,7 @@ pre {
         </div>
     </div>
 
-    <!-- Input pesan bawah -->
+    <!-- Input pesan -->
     <div class="input-bar">
         <div class="message-form">
             <input type="text" id="messageInput" class="message-input" placeholder="Ketik pesan..." disabled>
@@ -668,7 +371,7 @@ pre {
         </div>
     </div>
 
-    <!-- Informasi Firebase (collapsible) -->
+    <!-- Footer panduan -->
     <div class="info-footer">
         <details>
             <summary>⚙️ Setup Firebase & aturan database</summary>
@@ -700,7 +403,7 @@ pre {
 <script>
     // ====================== 🔥 KONFIGURASI FIREBASE (WAJIB GANTI) ======================
     const firebaseConfig = {
-        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",   // GANTI DENGAN API KEY ANDA
+        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
         authDomain: "aplikasi-chat-kngen.firebaseapp.com",
         databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app/",
         projectId: "aplikasi-chat-kngen",
@@ -716,8 +419,8 @@ pre {
     // State
     let currentUser = null;
     let currentRoom = null;
-    let keyPair = null;            // { publicKey, secretKey }
-    let connectedUsers = {};       // userId -> { name, publicKey }
+    let keyPair = null;
+    let connectedUsers = {};
     let targetUserId = null;
     let targetPublicKey = null;
 
@@ -733,7 +436,6 @@ pre {
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // Helper
     function generateRoomCode() {
         const code = Math.random().toString(36).substring(2, 10).toUpperCase();
         roomCodeInput.value = code;
@@ -904,7 +606,6 @@ pre {
         });
         userRef.onDisconnect().remove();
         
-        // Listener user lain
         const usersRef = db.ref(`rooms/${currentRoom}/users`);
         usersRef.off();
         usersRef.on('value', (snap) => {
@@ -936,7 +637,6 @@ pre {
             updateStatusUI();
         });
         
-        // Listener pesan
         const msgListener = db.ref(`rooms/${currentRoom}/messages`);
         msgListener.off();
         msgListener.on('child_added', (snap) => {
@@ -957,7 +657,6 @@ pre {
         sendBtn.disabled = false;
     }
 
-    // Event binding
     joinBtn.addEventListener('click', joinRoom);
     genRoomBtn.addEventListener('click', generateRoomCode);
     sendBtn.addEventListener('click', sendMessage);
@@ -968,7 +667,6 @@ pre {
         }
     });
     
-    // Inisialisasi
     usernameInput.value = "User_" + Math.floor(Math.random() * 900 + 100);
     generateRoomCode();
     
