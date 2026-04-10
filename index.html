@@ -15,10 +15,45 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
-    <!-- TweetNaCl -->
+    <!-- TweetNaCl core -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl-util/0.15.1/nacl-fast.min.js"
-            onerror="loadNaclUtil()"></script>
+
+    <!-- nacl-util: inline implementation — tidak perlu CDN, selalu tersedia -->
+    <script>
+    // Inline nacl-util v0.15.1 (MIT) — menghindari masalah CDN
+    (function(nacl) {
+        'use strict';
+        function validateBase64(s) {
+            if (!/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/.test(s))
+                throw new TypeError('invalid base64');
+        }
+        nacl.util = {
+            decodeUTF8: function(s) {
+                if (typeof s !== 'string') throw new TypeError('expected string');
+                var i, d = unescape(encodeURIComponent(s)), b = new Uint8Array(d.length);
+                for (i = 0; i < d.length; i++) b[i] = d.charCodeAt(i);
+                return b;
+            },
+            encodeUTF8: function(arr) {
+                var i, s = [];
+                for (i = 0; i < arr.length; i++) s.push(String.fromCharCode(arr[i]));
+                return decodeURIComponent(escape(s.join('')));
+            },
+            encodeBase64: function(arr) {
+                if (!(arr instanceof Uint8Array)) arr = new Uint8Array(arr);
+                var i, s = [], len = arr.length;
+                for (i = 0; i < len; i++) s.push(String.fromCharCode(arr[i]));
+                return btoa(s.join(''));
+            },
+            decodeBase64: function(s) {
+                if (typeof s !== 'string') throw new TypeError('expected string');
+                var i, d = atob(s), b = new Uint8Array(d.length);
+                for (i = 0; i < d.length; i++) b[i] = d.charCodeAt(i);
+                return b;
+            }
+        };
+    })(typeof nacl !== 'undefined' ? nacl : (nacl = {}));
+    </script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -441,17 +476,6 @@
     }
 
     // ========================================================
-    //  NACL UTIL FALLBACK LOADER
-    //  CDN cdnjs versi 0.15.1 mungkin tidak tersedia —
-    //  fallback ke versi tweetnacl-util yang lebih umum.
-    // ========================================================
-    function loadNaclUtil() {
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js';
-        document.head.appendChild(s);
-    }
-
-    // ========================================================
     //  FIREBASE CONFIG
     // ========================================================
     const firebaseConfig = {
@@ -525,39 +549,23 @@
     //  CRYPTO
     // ========================================================
     function generateKeyPair() {
-        // nacl.util fallback: some CDN versions expose util on nacl directly,
-        // others expose it globally as naclUtil.
-        const util = (typeof nacl !== 'undefined' && nacl.util)
-                   ? nacl.util
-                   : (typeof naclUtil !== 'undefined' ? naclUtil : null);
-        if (!util) throw new Error('nacl.util tidak tersedia');
-
         const kp = nacl.box.keyPair();
         return {
-            publicKey: util.encodeBase64(kp.publicKey),
-            secretKey: util.encodeBase64(kp.secretKey),
-            _pub: kp.publicKey,
-            _sec: kp.secretKey
+            publicKey: nacl.util.encodeBase64(kp.publicKey),
+            secretKey: nacl.util.encodeBase64(kp.secretKey)
         };
-    }
-
-    function getUtil() {
-        if (typeof nacl !== 'undefined' && nacl.util) return nacl.util;
-        if (typeof naclUtil !== 'undefined') return naclUtil;
-        throw new Error('nacl.util tidak ditemukan');
     }
 
     function encryptMessage(message, recipientPublicKeyB64, senderSecretKeyB64) {
         try {
-            const util = getUtil();
-            const nonce   = nacl.randomBytes(nacl.box.nonceLength);
-            const pubKey  = util.decodeBase64(recipientPublicKeyB64);
-            const secKey  = util.decodeBase64(senderSecretKeyB64);
-            const msgBytes = util.decodeUTF8(message);
-            const encrypted = nacl.box(msgBytes, nonce, pubKey, secKey);
+            const nonce      = nacl.randomBytes(nacl.box.nonceLength);
+            const pubKey     = nacl.util.decodeBase64(recipientPublicKeyB64);
+            const secKey     = nacl.util.decodeBase64(senderSecretKeyB64);
+            const msgBytes   = nacl.util.decodeUTF8(message);
+            const encrypted  = nacl.box(msgBytes, nonce, pubKey, secKey);
             return {
-                ciphertext: util.encodeBase64(encrypted),
-                nonce: util.encodeBase64(nonce)
+                ciphertext: nacl.util.encodeBase64(encrypted),
+                nonce:      nacl.util.encodeBase64(nonce)
             };
         } catch (e) {
             console.error('Encrypt error:', e);
@@ -567,14 +575,13 @@
 
     function decryptMessage(enc, senderPublicKeyB64, recipientSecretKeyB64) {
         try {
-            const util = getUtil();
-            const nonce      = util.decodeBase64(enc.nonce);
-            const ciphertext = util.decodeBase64(enc.ciphertext);
-            const pubKey     = util.decodeBase64(senderPublicKeyB64);
-            const secKey     = util.decodeBase64(recipientSecretKeyB64);
+            const nonce      = nacl.util.decodeBase64(enc.nonce);
+            const ciphertext = nacl.util.decodeBase64(enc.ciphertext);
+            const pubKey     = nacl.util.decodeBase64(senderPublicKeyB64);
+            const secKey     = nacl.util.decodeBase64(recipientSecretKeyB64);
             const decrypted  = nacl.box.open(ciphertext, nonce, pubKey, secKey);
             if (!decrypted) return null;
-            return util.encodeUTF8(decrypted);
+            return nacl.util.encodeUTF8(decrypted);
         } catch (e) {
             console.error('Decrypt error:', e);
             return null;
@@ -709,8 +716,8 @@
         }
 
         // Validasi nacl
-        try { getUtil(); } catch (e) {
-            showToast('❌ Library enkripsi belum siap. Tunggu sebentar dan coba lagi.', 4000);
+        if (typeof nacl === 'undefined' || !nacl.util || !nacl.box) {
+            showToast('❌ Library enkripsi (nacl) belum siap. Coba refresh halaman.', 4000);
             return;
         }
 
