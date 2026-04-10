@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>SecureChat • WhatsApp Style • E2EE</title>
+    <meta name="description" content="Aplikasi chat terenkripsi end-to-end dengan TweetNaCl dan Firebase - PWA Edition">
+    <meta name="theme-color" content="#075e54">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SecureChat">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link rel="manifest" href="data:application/json,{%22name%22:%22SecureChat%20E2EE%22,%22short_name%22:%22SecureChat%22,%22description%22:%22Chat%20Terenkripsi%20End-to-End%20dengan%20TweetNaCl%22,%22start_url%22:%22/%22,%22scope%22:%22/%22,%22display%22:%22standalone%22,%22theme_color%22:%22%23075e54%22,%22background_color%22:%22%23ffffff%22,%22orientation%22:%22portrait-primary%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20192%20192%27%3E%3Crect%20fill=%27%23075e54%27%20width=%27192%27%20height=%27192%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20font-size=%27120%27%20font-weight=%27bold%27%20fill=%27white%27%20text-anchor=%27middle%27%20dominant-baseline=%27central%27%3E💬%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22any%22},{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20512%20512%27%3E%3Crect%20fill=%27%23075e54%27%20width=%27512%27%20height=%27512%27%20rx=%27100%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20font-size=%27300%27%20font-weight=%27bold%27%20fill=%27white%27%20text-anchor=%27middle%27%20dominant-baseline=%27central%27%3E💬%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22maskable%22}]}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23075e54' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>💬</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23075e54' width='180' height='180' rx='40'/><text x='90' y='90' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>💬</text></svg>">
+    
+    <title>SecureChat • WhatsApp Style • E2EE PWA</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
@@ -132,8 +143,13 @@
             font-size: 0.8rem;
             color: white;
             cursor: pointer;
+            transition: transform 0.1s;
         }
         button:active { transform: scale(0.96); }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .btn-outline {
             background: #e9edef;
             color: #075e54;
@@ -166,6 +182,10 @@
             font-size: 0.75rem;
             border: 1px solid #e9edef;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+        .user-chip:active {
+            transform: scale(0.95);
         }
         .user-chip.active {
             background: #dcf8c5;
@@ -182,6 +202,7 @@
             font-weight: bold;
             font-size: 0.7rem;
             color: white;
+            flex-shrink: 0;
         }
 
         /* Area chat — scroll di sini saja */
@@ -194,487 +215,685 @@
             gap: 8px;
             background-image: radial-gradient(circle at 10% 30%, rgba(0,0,0,0.02) 2%, transparent 2.5%);
             background-size: 28px 28px;
-            min-height: 0; /* penting agar flex child bisa scroll */
+            min-height: 0;
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
         }
 
         .message {
             display: flex;
             flex-direction: column;
-            max-width: 80%;
-            animation: fadeIn 0.2s ease;
-        }
-        .message.own {
-            align-items: flex-end;
-            margin-left: auto;
-        }
-        .bubble {
-            padding: 8px 12px;
-            border-radius: 18px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            word-break: break-word;
-        }
-        .message:not(.own) .bubble {
-            background: white;
-            border-top-left-radius: 4px;
-            color: #111;
-            box-shadow: 0 1px 0.5px rgba(0,0,0,0.05);
-        }
-        .message.own .bubble {
-            background: #dcf8c5;
-            border-bottom-right-radius: 4px;
-            color: #111;
-        }
-        .meta {
-            font-size: 0.65rem;
-            color: #667781;
-            margin: 4px 8px 0;
-            display: flex;
-            gap: 6px;
-        }
-        .empty-chat {
-            text-align: center;
-            margin-top: 50px;
-            color: #8696a0;
-            font-size: 0.9rem;
+            gap: 4px;
+            margin: 4px 0;
+            animation: slideUp 0.3s ease-out;
         }
 
-        /* Input bawah */
-        .input-bar {
-            background: #f0f2f5;
-            padding: 10px 16px;
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
-            border-top: 1px solid #e9edef;
-            flex-shrink: 0;
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        .message-form {
+
+        .message.own {
+            align-items: flex-end;
+        }
+
+        .message .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 85%;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        .message.own .bubble {
+            background: #dcf8c5;
+            color: #000;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message:not(.own) .bubble {
+            background: white;
+            color: #000;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        .message .meta {
+            font-size: 0.65rem;
+            color: #54656f;
+            padding: 0 12px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .empty-chat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #54656f;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        /* Panel input */
+        .input-panel {
+            background: #fff;
+            border-top: 1px solid #e9edef;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
             display: flex;
             gap: 8px;
-            align-items: center;
+            align-items: flex-end;
+            flex-shrink: 0;
         }
-        .message-input {
+
+        .input-panel textarea {
             flex: 1;
-            background: white;
-            border: none;
-            border-radius: 30px;
+            background: #f5f5f5;
+            border: 1px solid #e9edef;
+            border-radius: 24px;
             padding: 10px 16px;
             font-size: 0.9rem;
+            font-family: inherit;
+            resize: none;
+            max-height: 80px;
             outline: none;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .message-input:disabled {
-            background: #f0f2f5;
+
+        .input-panel textarea:focus {
+            border-color: #25d366;
+            background: white;
         }
-        .send-btn {
-            background: #075e54;
-            width: 44px;
-            height: 44px;
+
+        .input-panel button {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            padding: 0;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            padding: 0;
+            font-size: 1rem;
         }
 
-        /* Footer */
-        .info-footer {
-            background: #e9edef;
-            font-size: 0.6rem;
-            padding: 6px 12px;
-            padding-bottom: max(6px, env(safe-area-inset-bottom));
-            text-align: center;
-            color: #54656f;
-            border-top: 1px solid #cfd4d8;
-            flex-shrink: 0;
-        }
-        details summary {
-            cursor: pointer;
-            color: #075e54;
-            font-weight: 500;
-        }
-        pre {
-            font-size: 0.55rem;
-            background: #fff;
-            padding: 8px;
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #075e54;
             border-radius: 12px;
-            overflow-x: auto;
-            margin-top: 6px;
-            text-align: left;
-            color: #111;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
-        ::-webkit-scrollbar {
-            width: 5px;
+        .install-prompt button {
+            margin-top: 10px;
+            width: 100%;
         }
-        ::-webkit-scrollbar-track {
-            background: #e9edef;
+
+        .hidden {
+            display: none !important;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #b9c4cc;
-            border-radius: 5px;
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .app {
+                max-width: 100%;
+                border-radius: 0;
+            }
+        }
+
+        /* Scrollbar styling */
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: #999;
         }
     </style>
 </head>
 <body>
-<div class="app">
-    <!-- Header -->
-    <div class="whats-header">
-        <div class="brand">
-            <span class="logo">💬</span>
-            <h1>SecureChat</h1>
-        </div>
-        <div class="header-right">
-            <div class="status-badge" id="connStatus">⚫ Offline</div>
-            <div class="encrypt-badge" id="e2eStatus">🔒 E2EE</div>
-        </div>
-    </div>
-
-    <!-- Panel join -->
-    <div class="join-panel">
-        <div class="input-group">
-            <label>Nama kamu</label>
-            <input type="text" id="username" placeholder="Nama" value="User">
-        </div>
-        <div class="input-group">
-            <label>Kode Room</label>
-            <input type="text" id="roomCode" placeholder="Kode rahasia">
-        </div>
-        <button id="joinBtn">Gabung</button>
-        <button id="genRoomBtn" class="btn-outline">Acak Room</button>
-    </div>
-
-    <!-- Partisipan -->
-    <div class="participants-strip" id="participantsStrip">
-        <span>📱 Partisipan:</span>
-        <span style="color:#8696a0;">— tidak ada —</span>
-    </div>
-
-    <!-- Chat messages -->
-    <div class="chat-area" id="chatMessages">
-        <div class="empty-chat">
-            🔐 Masuk ke room untuk memulai chat<br>
-            <span style="font-size:0.7rem;">Pesan dienkripsi ujung ke ujung</span>
-        </div>
-    </div>
-
-    <!-- Input pesan -->
-    <div class="input-bar">
-        <div class="message-form">
-            <input type="text" id="messageInput" class="message-input" placeholder="Ketik pesan..." disabled>
-            <button class="send-btn" id="sendBtn" disabled>➤</button>
-        </div>
-    </div>
-
-    <!-- Footer panduan -->
-    <div class="info-footer">
-        <details>
-            <summary>⚙️ Setup Firebase & aturan database</summary>
-            <div style="margin-top: 8px;">
-                🔥 Ganti <strong>firebaseConfig</strong> di script dengan milikmu.<br>
-                📁 Aktifkan Realtime Database dan gunakan rules berikut:
-                <pre>{
-  "rules": {
-    "rooms": {
-      "$roomId": {
-        ".read": true,
-        ".write": false,
-        "users": {
-          "$userId": { ".read": true, ".write": "!data.exists() || data.exists()" }
-        },
-        "messages": {
-          "$msgId": { ".read": true, ".write": "!data.exists()" }
-        }
-      }
-    }
-  }
-}</pre>
-                ✅ Pastikan databaseURL dan API key sudah benar.
+    <div class="app">
+        <!-- Header -->
+        <div class="whats-header">
+            <div class="brand">
+                <span class="logo">💬</span>
+                <h1>SecureChat</h1>
             </div>
-        </details>
-    </div>
-</div>
-
-<script>
-    // ====================== 🔥 KONFIGURASI FIREBASE (WAJIB GANTI) ======================
-    const firebaseConfig = {
-        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
-        authDomain: "aplikasi-chat-kngen.firebaseapp.com",
-        databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app/",
-        projectId: "aplikasi-chat-kngen",
-        storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
-        messagingSenderId: "858845228237",
-        appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84"
-    };
-    // ==================================================================================
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // State
-    let currentUser = null;
-    let currentRoom = null;
-    let keyPair = null;
-    let connectedUsers = {};
-    let targetUserId = null;
-    let targetPublicKey = null;
-
-    // DOM
-    const usernameInput = document.getElementById('username');
-    const roomCodeInput = document.getElementById('roomCode');
-    const joinBtn = document.getElementById('joinBtn');
-    const genRoomBtn = document.getElementById('genRoomBtn');
-    const connStatusSpan = document.getElementById('connStatus');
-    const e2eStatusSpan = document.getElementById('e2eStatus');
-    const participantsDiv = document.getElementById('participantsStrip');
-    const chatContainer = document.getElementById('chatMessages');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    function generateRoomCode() {
-        const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-        roomCodeInput.value = code;
-    }
-
-    function generateKeyPair() {
-        const pair = nacl.box.keyPair();
-        return {
-            publicKey: nacl.util.encodeBase64(pair.publicKey),
-            secretKey: nacl.util.encodeBase64(pair.secretKey)
-        };
-    }
-
-    function encryptMessage(plain, targetPubKey, mySecretKey) {
-        if (!targetPubKey || !mySecretKey) return null;
-        try {
-            const nonce = nacl.randomBytes(nacl.box.nonceLength);
-            const plainBytes = nacl.util.decodeUTF8(plain);
-            const pubBytes = nacl.util.decodeBase64(targetPubKey);
-            const secBytes = nacl.util.decodeBase64(mySecretKey);
-            const encrypted = nacl.box(plainBytes, nonce, pubBytes, secBytes);
-            return {
-                ciphertext: nacl.util.encodeBase64(encrypted),
-                nonce: nacl.util.encodeBase64(nonce)
-            };
-        } catch(e) { return null; }
-    }
-
-    function decryptMessage(encryptedObj, senderPubKey, mySecretKey) {
-        if (!senderPubKey || !mySecretKey) return null;
-        try {
-            const cipherBin = nacl.util.decodeBase64(encryptedObj.ciphertext);
-            const nonceBin = nacl.util.decodeBase64(encryptedObj.nonce);
-            const pubBytes = nacl.util.decodeBase64(senderPubKey);
-            const secBytes = nacl.util.decodeBase64(mySecretKey);
-            const plain = nacl.box.open(cipherBin, nonceBin, pubBytes, secBytes);
-            return plain ? nacl.util.encodeUTF8(plain) : null;
-        } catch(e) { return null; }
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
-    }
-
-    function updateParticipantsUI() {
-        const userIds = Object.keys(connectedUsers);
-        if (userIds.length === 0) {
-            participantsDiv.innerHTML = `<span>📱 Partisipan:</span> <span style="color:#8696a0;">— tidak ada —</span>`;
-            return;
-        }
-        let html = `<span>📱 Online (${userIds.length}):</span>`;
-        for (let uid of userIds) {
-            const u = connectedUsers[uid];
-            const isActive = (targetUserId === uid);
-            const initial = u.name ? u.name[0].toUpperCase() : '?';
-            html += `
-                <div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
-                    <div class="avatar">${initial}</div>
-                    <span>${escapeHtml(u.name)}</span>
+            <div class="header-right">
+                <div class="status-badge">
+                    <span id="conn-status" style="color:#dcf8c5;">🔄 Menginisialisasi...</span>
                 </div>
+                <div class="encrypt-badge">
+                    <span>🔐</span>
+                    <span id="e2e-status">Tidak aktif</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Panel -->
+        <div class="join-panel">
+            <div class="input-group" style="flex: 1.2;">
+                <label>Nama Anda</label>
+                <input type="text" id="username-input" placeholder="Masukkan nama">
+            </div>
+            <div class="input-group" style="flex: 1;">
+                <label>Kode Room</label>
+                <input type="text" id="room-code-input" placeholder="Room code">
+            </div>
+            <button id="gen-room-btn" class="btn-outline">⚙️ Generate</button>
+            <button id="join-btn">Bergabung</button>
+        </div>
+
+        <!-- Participants -->
+        <div class="participants-strip">
+            <span>Pengguna aktif:</span>
+            <div id="participants-div"></div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chat-container">
+            <div class="empty-chat">
+                🔐 Bergabung ke room untuk mulai chatting
+                <span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span>
+            </div>
+        </div>
+
+        <!-- Input Panel -->
+        <div class="input-panel">
+            <textarea id="message-input" placeholder="💬 Pesan (E2EE)" maxlength="1024" rows="1" disabled></textarea>
+            <button id="send-btn" disabled>📤</button>
+        </div>
+    </div>
+
+    <script>
+        // =================== PWA SERVICE WORKER REGISTRATION ===================
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'securechat-v1';
+                const urlsToCache = [
+                    '/',
+                    '/index.html',
+                    'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js',
+                    'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js'
+                ];
+
+                self.addEventListener('install', (event) => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then((cache) => {
+                            return cache.addAll(urlsToCache).catch(() => {
+                                console.log('Some resources failed to cache (expected for offline-first)');
+                            });
+                        })
+                    );
+                    self.skipWaiting();
+                });
+
+                self.addEventListener('activate', (event) => {
+                    event.waitUntil(
+                        caches.keys().then((cacheNames) => {
+                            return Promise.all(
+                                cacheNames.map((cacheName) => {
+                                    if (cacheName !== CACHE_NAME) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                    self.clients.claim();
+                });
+
+                self.addEventListener('fetch', (event) => {
+                    if (event.request.method !== 'GET') {
+                        return;
+                    }
+
+                    event.respondWith(
+                        caches.match(event.request).then((response) => {
+                            if (response) {
+                                return response;
+                            }
+
+                            return fetch(event.request).then((response) => {
+                                if (!response || response.status !== 200 || response.type !== 'basic') {
+                                    return response;
+                                }
+
+                                const responseToCache = response.clone();
+                                caches.open(CACHE_NAME).then((cache) => {
+                                    cache.put(event.request, responseToCache);
+                                });
+
+                                return response;
+                            }).catch(() => {
+                                return caches.match(event.request).then((cachedResponse) => {
+                                    return cachedResponse || new Response('Offline', { status: 503 });
+                                });
+                            });
+                        })
+                    );
+                });
             `;
+
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+
+            navigator.serviceWorker.register(swUrl, { scope: '/' }).then((registration) => {
+                console.log('✅ Service Worker registered successfully', registration);
+            }).catch((error) => {
+                console.error('❌ Service Worker registration failed:', error);
+            });
         }
-        participantsDiv.innerHTML = html;
-        document.querySelectorAll('.user-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const uid = chip.getAttribute('data-uid');
-                if (uid && connectedUsers[uid]?.publicKey) {
-                    targetUserId = uid;
-                    targetPublicKey = connectedUsers[uid].publicKey;
-                    updateParticipantsUI();
-                    updateStatusUI();
-                    messageInput.placeholder = `💬 Pesan ke ${connectedUsers[uid].name} (E2EE)`;
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
+
+        // =================== PWA INSTALL PROMPT ===================
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+
+        function showInstallPrompt() {
+            const prompt = document.createElement('div');
+            prompt.className = 'install-prompt';
+            prompt.innerHTML = `
+                <strong>📱 Install SecureChat</strong>
+                <p style="font-size: 0.85rem; margin: 8px 0; color: #666;">Gunakan sebagai aplikasi native di perangkat Anda</p>
+                <button id="install-btn" style="background: #25d366; margin: 8px 0 0 0; width: 100%;">Install Sekarang</button>
+                <button id="dismiss-btn" class="btn-outline" style="margin: 4px 0 0 0; width: 100%;">Nanti</button>
+            `;
+            document.body.appendChild(prompt);
+
+            document.getElementById('install-btn').addEventListener('click', () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('✅ PWA installed');
+                        }
+                        deferredPrompt = null;
+                        prompt.remove();
+                    });
                 }
             });
+
+            document.getElementById('dismiss-btn').addEventListener('click', () => {
+                prompt.remove();
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ App installed successfully');
+            deferredPrompt = null;
         });
-    }
 
-    function appendMessage(senderName, text, isOwn, timestamp = new Date()) {
-        const emptyDiv = chatContainer.querySelector('.empty-chat');
-        if (emptyDiv) emptyDiv.remove();
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
-        const timeStr = timestamp.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        msgDiv.innerHTML = `
-            <div class="bubble">${escapeHtml(text)}</div>
-            <div class="meta">${isOwn ? 'Anda' : escapeHtml(senderName)} • ${timeStr}</div>
-        `;
-        chatContainer.appendChild(msgDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+        // =================== DOM ELEMENTS ===================
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const usernameInput = document.getElementById('username-input');
+        const roomCodeInput = document.getElementById('room-code-input');
+        const joinBtn = document.getElementById('join-btn');
+        const genRoomBtn = document.getElementById('gen-room-btn');
+        const connStatusSpan = document.getElementById('conn-status');
+        const e2eStatusSpan = document.getElementById('e2e-status');
+        const participantsDiv = document.getElementById('participants-div');
 
-    function updateStatusUI() {
-        if (!currentRoom || !currentUser) {
-            connStatusSpan.innerText = '⚫ Offline';
-            e2eStatusSpan.innerText = '🔒 Tidak aktif';
-            return;
-        }
-        const userCount = Object.keys(connectedUsers).length;
-        connStatusSpan.innerText = `🟢 ${currentRoom} | ${userCount} partner`;
-        if (targetPublicKey) {
-            const targetName = connectedUsers[targetUserId]?.name || 'partner';
-            e2eStatusSpan.innerText = `🔐 E2E ke ${targetName}`;
-        } else if (userCount > 0) {
-            e2eStatusSpan.innerText = `⚠️ Pilih partner`;
-        } else {
-            e2eStatusSpan.innerText = `⏳ Menunggu partner`;
-        }
-        const canSend = (currentRoom && currentUser && targetPublicKey);
-        messageInput.disabled = !canSend;
-        sendBtn.disabled = !canSend;
-        if (!canSend && userCount > 0 && !targetPublicKey) {
-            messageInput.placeholder = "👆 Klik salah satu user di atas";
-        }
-    }
+        // =================== ENCRYPTION SETUP ===================
+        let currentRoom = null;
+        let currentUser = null;
+        let keyPair = null;
+        let targetUserId = null;
+        let targetPublicKey = null;
+        let connectedUsers = {};
 
-    async function sendMessage() {
-        const msg = messageInput.value.trim();
-        if (!msg || !targetPublicKey) return;
-        const encrypted = encryptMessage(msg, targetPublicKey, keyPair.secretKey);
-        if (!encrypted) {
-            alert("Gagal enkripsi.");
-            return;
-        }
-        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        await msgRef.set({
-            senderId: currentUser.id,
-            senderName: currentUser.name,
-            ciphertext: encrypted.ciphertext,
-            nonce: encrypted.nonce,
-            timestamp: Date.now()
-        });
-        appendMessage(currentUser.name, msg, true);
-        messageInput.value = '';
-        messageInput.focus();
-    }
-
-    async function joinRoom() {
-        let name = usernameInput.value.trim();
-        let room = roomCodeInput.value.trim();
-        if (!name) name = "User_" + Math.floor(Math.random() * 1000);
-        if (!room) {
-            alert("Masukkan kode room atau generate terlebih dahulu");
-            return;
-        }
-        if (currentRoom && currentUser) {
-            await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
-        }
-        currentUser = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-            name: name,
+        // Firebase configuration (⚠️ GANTI DENGAN CONFIG ANDA)
+        const firebaseConfig = {
+            apiKey: "AIzaSyxxxxxxxxxxxxxxxxxx",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "xxxxxxxxxx",
+            appId: "1:xxxxxxxxxx:web:xxxxxxxxxx"
         };
-        currentRoom = room.toLowerCase();
-        keyPair = generateKeyPair();
-        targetUserId = null;
-        targetPublicKey = null;
-        connectedUsers = {};
-        
-        chatContainer.innerHTML = `<div class="empty-chat">🔒 Bergabung ke room "${escapeHtml(room)}"<br><span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span></div>`;
-        
-        const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
-        await userRef.set({
-            name: currentUser.name,
-            publicKey: keyPair.publicKey,
-            timestamp: Date.now()
-        });
-        userRef.onDisconnect().remove();
-        
-        const usersRef = db.ref(`rooms/${currentRoom}/users`);
-        usersRef.off();
-        usersRef.on('value', (snap) => {
-            const users = snap.val() || {};
-            const newUsers = {};
-            for (let [uid, data] of Object.entries(users)) {
-                if (uid !== currentUser.id && data?.publicKey) {
-                    newUsers[uid] = { name: data.name, publicKey: data.publicKey };
-                }
-            }
-            connectedUsers = newUsers;
-            if (!targetPublicKey && Object.keys(connectedUsers).length > 0) {
-                const firstId = Object.keys(connectedUsers)[0];
-                targetUserId = firstId;
-                targetPublicKey = connectedUsers[firstId].publicKey;
-            } else if (Object.keys(connectedUsers).length === 0) {
-                targetPublicKey = null;
-                targetUserId = null;
-            } else if (targetUserId && !connectedUsers[targetUserId]) {
-                const firstId = Object.keys(connectedUsers)[0];
-                if (firstId) {
-                    targetUserId = firstId;
-                    targetPublicKey = connectedUsers[firstId].publicKey;
-                } else {
-                    targetPublicKey = null;
-                }
-            }
-            updateParticipantsUI();
-            updateStatusUI();
-        });
-        
-        const msgListener = db.ref(`rooms/${currentRoom}/messages`);
-        msgListener.off();
-        msgListener.on('child_added', (snap) => {
-            const data = snap.val();
-            if (!data || data.senderId === currentUser?.id) return;
-            const senderPub = connectedUsers[data.senderId]?.publicKey;
-            if (!senderPub) return;
-            const decrypted = decryptMessage({ ciphertext: data.ciphertext, nonce: data.nonce }, senderPub, keyPair.secretKey);
-            if (decrypted) {
-                appendMessage(data.senderName, decrypted, false, new Date(data.timestamp));
-            } else {
-                appendMessage(data.senderName, "[🔒 Pesan tidak dapat didekripsi]", false, new Date(data.timestamp));
-            }
-        });
-        
-        updateStatusUI();
-        messageInput.disabled = false;
-        sendBtn.disabled = false;
-    }
 
-    joinBtn.addEventListener('click', joinRoom);
-    genRoomBtn.addEventListener('click', generateRoomCode);
-    sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled) {
-            e.preventDefault();
-            sendMessage();
+        let db = null;
+
+        // Initialize Firebase dengan error handling
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            connStatusSpan.innerText = '🟢 Connected';
+            connStatusSpan.style.color = '#dcf8c5';
+        } catch (error) {
+            console.error('❌ Firebase initialization error:', error);
+            connStatusSpan.innerText = '⚠️ Config error';
+            connStatusSpan.style.color = '#ffb3b3';
+            alert('⚠️ Firebase belum dikonfigurasi. Edit firebaseConfig di script.');
         }
-    });
-    
-    usernameInput.value = "User_" + Math.floor(Math.random() * 900 + 100);
-    generateRoomCode();
-    
-    window.addEventListener('beforeunload', () => {
-        if (currentRoom && currentUser) {
-            db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
+
+        // =================== ENCRYPTION FUNCTIONS ===================
+        function generateKeyPair() {
+            const keyPair = nacl.box.keyPair();
+            return {
+                publicKey: nacl.util.encodeBase64(keyPair.publicKey),
+                secretKey: nacl.util.encodeBase64(keyPair.secretKey)
+            };
         }
-    });
-</script>
+
+        function encryptMessage(message, recipientPublicKey, senderSecretKey) {
+            try {
+                const nonce = nacl.randomBytes(nacl.box.nonceLength);
+                const pubKey = nacl.util.decodeBase64(recipientPublicKey);
+                const secKey = nacl.util.decodeBase64(senderSecretKey);
+                const messageBytes = nacl.util.decodeUTF8(message);
+
+                const encrypted = nacl.box(messageBytes, nonce, pubKey, secKey);
+
+                return {
+                    ciphertext: nacl.util.encodeBase64(encrypted),
+                    nonce: nacl.util.encodeBase64(nonce)
+                };
+            } catch (error) {
+                console.error('❌ Encryption error:', error);
+                return null;
+            }
+        }
+
+        function decryptMessage(encryptedData, senderPublicKey, recipientSecretKey) {
+            try {
+                const nonce = nacl.util.decodeBase64(encryptedData.nonce);
+                const ciphertext = nacl.util.decodeBase64(encryptedData.ciphertext);
+                const pubKey = nacl.util.decodeBase64(senderPublicKey);
+                const secKey = nacl.util.decodeBase64(recipientSecretKey);
+
+                const decrypted = nacl.box.open(ciphertext, nonce, pubKey, secKey);
+                if (!decrypted) return null;
+
+                return nacl.util.encodeUTF8(decrypted);
+            } catch (error) {
+                console.error('❌ Decryption error:', error);
+                return null;
+            }
+        }
+
+        // =================== UI FUNCTIONS ===================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            roomCodeInput.value = code;
+        }
+
+        function updateParticipantsUI() {
+            const userIds = Object.keys(connectedUsers).sort();
+            let html = '';
+            for (let uid of userIds) {
+                const u = connectedUsers[uid];
+                const isActive = (targetUserId === uid);
+                const initial = u.name ? u.name[0].toUpperCase() : '?';
+                html += `
+                    <div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
+                        <div class="avatar">${initial}</div>
+                        <span>${escapeHtml(u.name)}</span>
+                    </div>
+                `;
+            }
+            participantsDiv.innerHTML = html;
+            document.querySelectorAll('.user-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const uid = chip.getAttribute('data-uid');
+                    if (uid && connectedUsers[uid]?.publicKey) {
+                        targetUserId = uid;
+                        targetPublicKey = connectedUsers[uid].publicKey;
+                        updateParticipantsUI();
+                        updateStatusUI();
+                        messageInput.placeholder = `💬 Pesan ke ${connectedUsers[uid].name} (E2EE)`;
+                        messageInput.disabled = false;
+                        sendBtn.disabled = false;
+                    }
+                });
+            });
+        }
+
+        function appendMessage(senderName, text, isOwn, timestamp = new Date()) {
+            const emptyDiv = chatContainer.querySelector('.empty-chat');
+            if (emptyDiv) emptyDiv.remove();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isOwn ? 'own' : ''}`;
+            const timeStr = timestamp.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            msgDiv.innerHTML = `
+                <div class="bubble">${escapeHtml(text)}</div>
+                <div class="meta">${isOwn ? 'Anda' : escapeHtml(senderName)} • ${timeStr}</div>
+            `;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function updateStatusUI() {
+            if (!currentRoom || !currentUser) {
+                connStatusSpan.innerText = '⚫ Offline';
+                e2eStatusSpan.innerText = '🔒 Tidak aktif';
+                return;
+            }
+            const userCount = Object.keys(connectedUsers).length;
+            connStatusSpan.innerText = `🟢 ${currentRoom} | ${userCount} partner`;
+            if (targetPublicKey) {
+                const targetName = connectedUsers[targetUserId]?.name || 'partner';
+                e2eStatusSpan.innerText = `🔐 E2E ke ${escapeHtml(targetName)}`;
+            } else if (userCount > 0) {
+                e2eStatusSpan.innerText = `⚠️ Pilih partner`;
+            } else {
+                e2eStatusSpan.innerText = `⏳ Menunggu partner`;
+            }
+            const canSend = (currentRoom && currentUser && targetPublicKey);
+            messageInput.disabled = !canSend;
+            sendBtn.disabled = !canSend;
+            if (!canSend && userCount > 0 && !targetPublicKey) {
+                messageInput.placeholder = "👆 Klik salah satu user di atas";
+            }
+        }
+
+        async function sendMessage() {
+            const msg = messageInput.value.trim();
+            if (!msg || !targetPublicKey || !db) return;
+            const encrypted = encryptMessage(msg, targetPublicKey, keyPair.secretKey);
+            if (!encrypted) {
+                alert("Gagal enkripsi. Cek console untuk detail.");
+                return;
+            }
+            try {
+                const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+                await msgRef.set({
+                    senderId: currentUser.id,
+                    senderName: currentUser.name,
+                    ciphertext: encrypted.ciphertext,
+                    nonce: encrypted.nonce,
+                    timestamp: Date.now()
+                });
+                appendMessage(currentUser.name, msg, true);
+                messageInput.value = '';
+                messageInput.focus();
+            } catch (error) {
+                console.error("Send message error:", error);
+                alert("Gagal mengirim pesan. Cek koneksi Firebase.");
+            }
+        }
+
+        async function joinRoom() {
+            if (!db) {
+                alert("Firebase belum diinisialisasi. Cek konfigurasi.");
+                return;
+            }
+            let name = usernameInput.value.trim();
+            let room = roomCodeInput.value.trim();
+            if (!name) name = "User_" + Math.floor(Math.random() * 1000);
+            if (!room) {
+                alert("Masukkan kode room atau generate terlebih dahulu");
+                return;
+            }
+            if (currentRoom && currentUser) {
+                await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
+            }
+            currentUser = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                name: name,
+            };
+            currentRoom = room.toLowerCase();
+            keyPair = generateKeyPair();
+            targetUserId = null;
+            targetPublicKey = null;
+            connectedUsers = {};
+            
+            chatContainer.innerHTML = `<div class="empty-chat">🔒 Bergabung ke room "${escapeHtml(room)}"<br><span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span></div>`;
+            
+            try {
+                const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
+                await userRef.set({
+                    name: currentUser.name,
+                    publicKey: keyPair.publicKey,
+                    timestamp: Date.now()
+                });
+                userRef.onDisconnect().remove();
+                
+                const usersRef = db.ref(`rooms/${currentRoom}/users`);
+                usersRef.off();
+                usersRef.on('value', (snap) => {
+                    const users = snap.val() || {};
+                    const newUsers = {};
+                    for (let [uid, data] of Object.entries(users)) {
+                        if (uid !== currentUser.id && data?.publicKey) {
+                            newUsers[uid] = { name: data.name, publicKey: data.publicKey };
+                        }
+                    }
+                    connectedUsers = newUsers;
+                    if (!targetPublicKey && Object.keys(connectedUsers).length > 0) {
+                        const firstId = Object.keys(connectedUsers)[0];
+                        targetUserId = firstId;
+                        targetPublicKey = connectedUsers[firstId].publicKey;
+                    } else if (Object.keys(connectedUsers).length === 0) {
+                        targetPublicKey = null;
+                        targetUserId = null;
+                    } else if (targetUserId && !connectedUsers[targetUserId]) {
+                        const firstId = Object.keys(connectedUsers)[0];
+                        if (firstId) {
+                            targetUserId = firstId;
+                            targetPublicKey = connectedUsers[firstId].publicKey;
+                        } else {
+                            targetPublicKey = null;
+                        }
+                    }
+                    updateParticipantsUI();
+                    updateStatusUI();
+                });
+                
+                const msgListener = db.ref(`rooms/${currentRoom}/messages`);
+                msgListener.off();
+                msgListener.on('child_added', (snap) => {
+                    const data = snap.val();
+                    if (!data || data.senderId === currentUser?.id) return;
+                    const senderPub = connectedUsers[data.senderId]?.publicKey;
+                    if (!senderPub) return;
+                    const decrypted = decryptMessage({ ciphertext: data.ciphertext, nonce: data.nonce }, senderPub, keyPair.secretKey);
+                    if (decrypted) {
+                        appendMessage(data.senderName, decrypted, false, new Date(data.timestamp));
+                    } else {
+                        appendMessage(data.senderName, "[🔒 Pesan tidak dapat didekripsi]", false, new Date(data.timestamp));
+                    }
+                });
+                
+                updateStatusUI();
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } catch (error) {
+                console.error("Join room error:", error);
+                alert("Gagal bergabung ke room. Cek konfigurasi Firebase.");
+            }
+        }
+
+        joinBtn.addEventListener('click', joinRoom);
+        genRoomBtn.addEventListener('click', generateRoomCode);
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        usernameInput.value = "User_" + Math.floor(Math.random() * 900 + 100);
+        generateRoomCode();
+        
+        window.addEventListener('beforeunload', () => {
+            if (currentRoom && currentUser && db) {
+                db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
+            }
+        });
+
+        // =================== ONLINE/OFFLINE DETECTION ===================
+        window.addEventListener('online', () => {
+            console.log('🟢 Back online');
+            connStatusSpan.style.color = '#dcf8c5';
+            if (currentRoom) updateStatusUI();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('🔴 Offline mode');
+            connStatusSpan.style.color = '#ffb3b3';
+            connStatusSpan.innerText = '⚫ Offline (local mode)';
+        });
+
+        // Check initial online status
+        if (!navigator.onLine) {
+            connStatusSpan.style.color = '#ffb3b3';
+            connStatusSpan.innerText = '⚫ Offline';
+        }
+    </script>
 </body>
 </html>
