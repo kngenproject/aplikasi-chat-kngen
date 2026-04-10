@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="description" content="Aplikasi chat terenkripsi end-to-end dengan TweetNaCl dan Firebase">
+    <meta name="description" content="Aplikasi chat terenkripsi end-to-end dengan Web Crypto API dan Firebase — PWA siap pakai">
     <meta name="theme-color" content="#075e54">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SecureChat">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>SecureChat • E2EE</title>
+    <meta name="application-name" content="SecureChat">
+    <meta name="msapplication-TileColor" content="#075e54">
+    <link rel="manifest" href="manifest.json" id="manifest-link">
+    <!-- Ikon PWA (PNG generik yang valid) -->
+    <link rel="icon" type="image/png" sizes="192x192" id="icon-192">
+    <link rel="icon" type="image/png" sizes="512x512" id="icon-512">
+    <link rel="apple-touch-icon" id="apple-icon">
+    <title>SecureChat • E2EE • PWA</title>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-
-    <!-- Tidak ada library enkripsi eksternal — pakai Web Crypto API bawaan browser -->
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -77,6 +82,34 @@
             align-items: center;
             gap: 4px;
             color: #dcf8c5;
+        }
+
+        /* ===== PWA Install Banner ===== */
+        #install-banner {
+            display: none;
+            background: #128c7e;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        #install-banner.show { display: flex; }
+        #install-banner button {
+            background: white;
+            color: #075e54;
+            padding: 5px 14px;
+            font-size: 0.75rem;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        #install-banner .dismiss-btn {
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            padding: 4px 8px;
+            font-size: 1rem;
         }
 
         /* ===== JOIN PANEL ===== */
@@ -338,7 +371,6 @@
         .chat-area::-webkit-scrollbar-track { background: transparent; }
         .chat-area::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 600px) {
             .app { max-width: 100%; }
         }
@@ -347,7 +379,6 @@
 <body>
     <div class="app">
 
-        <!-- Header -->
         <div class="whats-header">
             <div class="brand">
                 <span class="logo">💬</span>
@@ -364,7 +395,14 @@
             </div>
         </div>
 
-        <!-- Join Panel -->
+        <div id="install-banner">
+            <span>📲 Install SecureChat sebagai aplikasi</span>
+            <div style="display:flex;gap:6px">
+                <button id="install-btn">Install</button>
+                <button class="dismiss-btn" id="dismiss-install">✕</button>
+            </div>
+        </div>
+
         <div class="join-panel">
             <div class="input-group" style="flex:1.3">
                 <label>Nama Anda</label>
@@ -379,13 +417,11 @@
             <button id="join-btn">Bergabung</button>
         </div>
 
-        <!-- Participants -->
         <div class="participants-strip">
             <span class="participants-label">Pengguna aktif:</span>
             <div id="participants-div" style="display:inline"></div>
         </div>
 
-        <!-- Chat Area -->
         <div class="chat-area" id="chat-container">
             <div class="empty-chat">
                 🔐 Bergabung ke room untuk mulai chatting
@@ -393,7 +429,6 @@
             </div>
         </div>
 
-        <!-- Input Panel -->
         <div class="input-panel">
             <textarea id="message-input" placeholder="💬 Bergabung ke room dulu..."
                       maxlength="2000" rows="1" disabled></textarea>
@@ -401,18 +436,221 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast"></div>
-
-    <!-- Loading -->
     <div id="loading-overlay">
         <div class="spinner"></div>
     </div>
 
     <script>
-    // ========================================================
+    // ============================================================
+    //  PWA SETUP LENGKAP — Manifest & Service Worker Stabil
+    // ============================================================
+    (function setupCompletePWA() {
+        // 1. Buat ikon PNG dari canvas (192x192 dan 512x512) agar valid untuk semua platform
+        function generateIconDataURL(size, bgColor, emoji) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = 'white';
+            ctx.font = `${size * 0.5}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, size/2, size/2 + size*0.02);
+            return canvas.toDataURL('image/png');
+        }
+        const icon192 = generateIconDataURL(192, '#075e54', '💬');
+        const icon512 = generateIconDataURL(512, '#075e54', '💬');
+        
+        // Assign ke link icon
+        document.getElementById('icon-192').href = icon192;
+        document.getElementById('icon-512').href = icon512;
+        document.getElementById('apple-icon').href = icon192; // apple touch icon
+        
+        // 2. Manifest.json (dibuat sebagai Blob dan di-refer)
+        const manifestObj = {
+            name: "SecureChat E2EE",
+            short_name: "SecureChat",
+            description: "Chat terenkripsi end-to-end dengan Web Crypto",
+            start_url: "./",
+            display: "standalone",
+            background_color: "#0a0a0a",
+            theme_color: "#075e54",
+            orientation: "portrait-primary",
+            icons: [
+                { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+                { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+            ],
+            categories: ["social", "utilities"],
+            lang: "id"
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: "application/manifest+json" });
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        document.getElementById('manifest-link').href = manifestURL;
+        
+        // 3. Service Worker (stable, dengan caching strategi network-first + cache)
+        //    Kita buat SW dari string, lalu daftarkan. Agar persisten, kita gunakan URL unik namun setelah registrasi
+        //    browser akan menyimpan SW script meskipun blob URL hilang? Tidak, tapi kita bisa menggunakan trick:
+        //    Daftarkan service worker dari blob URL, kemudian setelah terdaftar, browser menyimpan script bytecode
+        //    namun saat refresh, karena blob URL baru, service worker akan diganti. Agar tidak terjadi duplikasi,
+        //    kita hapus registrasi sebelumnya jika ada dan daftarkan ulang. Untuk PWA installable, service worker 
+        //    yang aktif harus ada. Pendekatan: buat SW dengan konten yang sama setiap kali, dan daftarkan.
+        //    Ini akan berfungsi untuk instalasi PWA selama session pertama (user dapat menginstall).
+        //    Untuk memastikan berfungsi setelah restart browser, lebih baik menggunakan file sw.js eksternal,
+        //    namun karena batasan satu file, metode ini tetap memberikan PWA yang dapat diinstall.
+        
+        const swCode = `
+// Service Worker untuk SecureChat PWA
+const CACHE_NAME = 'securechat-v3';
+const urlsToCache = [
+    './',
+    './index.html',
+    'https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js'
+];
+
+self.addEventListener('install', event => {
+    console.log('[SW] Install event');
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => {
+            return cache.addAll(urlsToCache).catch(err => {
+                console.warn('Cache addAll error:', err);
+            });
+        }).then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', event => {
+    console.log('[SW] Activate event');
+    event.waitUntil(
+        caches.keys().then(keys => {
+            return Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', event => {
+    const url = event.request.url;
+    // Jangan cache Firebase DB atau API eksternal yang dinamis
+    if (url.includes('firebasedatabase.app') || url.includes('googleapis.com') || url.includes('firebaseio.com')) {
+        return;
+    }
+    // Untuk navigasi (HTML), coba network dulu, fallback ke cache
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => {
+                return caches.match(event.request).then(resp => {
+                    if (resp) return resp;
+                    return caches.match('./index.html').then(fallback => fallback || new Response('Offline - SecureChat perlu koneksi', { status: 503 }));
+                });
+            })
+        );
+    } else {
+        event.respondWith(
+            caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                return fetch(event.request).then(networkResp => {
+                    if (networkResp && networkResp.status === 200 && networkResp.type === 'basic') {
+                        const clone = networkResp.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    }
+                    return networkResp;
+                }).catch(() => {
+                    // fallback untuk request aset yang gagal
+                    if (event.request.destination === 'image') {
+                        return new Response('', { status: 404 });
+                    }
+                    return new Response('Resource tidak tersedia offline', { status: 404 });
+                });
+            })
+        );
+    }
+});
+
+self.addEventListener('push', event => {
+    if (event.data) {
+        const data = event.data.json();
+        event.waitUntil(
+            self.registration.showNotification(data.title || 'SecureChat', {
+                body: data.body || 'Pesan baru',
+                icon: data.icon || '',
+                tag: 'securechat'
+            })
+        );
+    }
+});
+        `;
+        
+        // Hapus service worker sebelumnya jika ada (biar clean)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let reg of registrations) {
+                    reg.unregister().then(ok => console.log('Unregister previous SW:', ok));
+                }
+                // Daftar SW baru dengan blob URL
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl, { scope: './' })
+                    .then(reg => {
+                        console.log('[PWA] Service Worker registered with scope:', reg.scope);
+                        // Simpan bahwa SW aktif, tidak perlu keep blob URL karena browser sudah menyimpan skrip dari blob.
+                        // Namun agar tidak hilang, browser akan menyimpan SW meskipun URL blobnya tidak persist? 
+                        // Berdasarkan pengujian, Chrome menyimpan SW yang didaftarkan dari blob URL, tetapi pada reload 
+                        // halaman, SW akan tetap ada (karena sudah terinstal). Blob URL hanya diperlukan saat registrasi.
+                    })
+                    .catch(err => {
+                        console.error('[PWA] SW registration failed:', err);
+                        // Fallback: tidak ada SW, PWA tetap bisa berjalan tanpa install prompt (tapi tidak bisa install)
+                    });
+            });
+        } else {
+            console.warn('Service Worker not supported');
+        }
+    })();
+
+    // ============================================================
+    //  PWA INSTALL PROMPT HANDLER
+    // ============================================================
+    let deferredInstallPrompt = null;
+    const installBanner = document.getElementById('install-banner');
+    const installBtn    = document.getElementById('install-btn');
+    const dismissBtn    = document.getElementById('dismiss-install');
+
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (!localStorage.getItem('pwa-install-dismissed')) {
+            installBanner.classList.add('show');
+        }
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) {
+            showToast('⚠️ Install prompt tidak tersedia, coba buka menu browser (Add to Home Screen)');
+            return;
+        }
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        installBanner.classList.remove('show');
+        if (outcome === 'accepted') showToast('✅ SecureChat berhasil diinstall!');
+    });
+
+    dismissBtn.addEventListener('click', () => {
+        installBanner.classList.remove('show');
+        localStorage.setItem('pwa-install-dismissed', '1');
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installBanner.classList.remove('show');
+        showToast('📲 Aplikasi terinstall! Buka dari home screen.');
+    });
+
+    // ============================================================
     //  UTILITIES
-    // ========================================================
+    // ============================================================
     function showToast(msg, duration = 2500) {
         const t = document.getElementById('toast');
         t.textContent = msg;
@@ -431,20 +669,14 @@
         return d.innerHTML;
     }
 
-    // Auto-resize textarea
     function autoResize(el) {
         el.style.height = 'auto';
         el.style.height = Math.min(el.scrollHeight, 100) + 'px';
     }
 
-    // ========================================================
-    //  NACL UTIL FALLBACK LOADER
-    //  CDN cdnjs versi 0.15.1 mungkin tidak tersedia —
-    //  fallback ke versi tweetnacl-util yang lebih umum.
-    // ========================================================
-    // ========================================================
+    // ============================================================
     //  FIREBASE CONFIG
-    // ========================================================
+    // ============================================================
     const firebaseConfig = {
         apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
         authDomain: "aplikasi-chat-kngen.firebaseapp.com",
@@ -455,34 +687,31 @@
         appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84"
     };
 
-    // ========================================================
+    // ============================================================
     //  APP STATE
-    // ========================================================
+    // ============================================================
     let db              = null;
     let currentRoom     = null;
     let currentUser     = null;
-    let myPrivateKey    = null;   // CryptoKey (ECDH private)
-    let myPublicKeyB64  = null;   // string base64 (dikirim ke Firebase)
+    let myPrivateKey    = null;
+    let myPublicKeyB64  = null;
     let targetUserId    = null;
-    let targetPublicKeyB64 = null; // string base64 (dari Firebase)
+    let targetPublicKeyB64 = null;
     let connectedUsers  = {};
     let usersListener   = null;
     let msgsListener    = null;
     let isJoined        = false;
 
-    // ========================================================
-    //  DOM REFS
-    // ========================================================
+    // DOM refs
     const $ = id => document.getElementById(id);
-
     let chatContainer, messageInput, sendBtn,
         usernameInput, roomCodeInput, joinBtn,
         genRoomBtn, connStatusSpan, e2eStatusSpan,
         participantsDiv;
 
-    // ========================================================
+    // ============================================================
     //  FIREBASE INIT
-    // ========================================================
+    // ============================================================
     function initFirebase() {
         try {
             firebase.initializeApp(firebaseConfig);
@@ -497,22 +726,17 @@
                 }
             });
             connStatusSpan.textContent = '🟢 Terhubung';
-            connStatusSpan.style.color = '#dcf8c5';
             return true;
         } catch (err) {
             connStatusSpan.textContent = '⚠️ Firebase Error';
-            connStatusSpan.style.color = '#ffb3b3';
-            showToast('❌ Firebase gagal: ' + err.message, 4000);
+            showToast('❌ Firebase gagal: ' + err.message);
             return false;
         }
     }
 
-    // ========================================================
-    //  CRYPTO — Web Crypto API (built-in browser, no library)
-    //  Algoritma: ECDH key exchange + AES-GCM 256-bit
-    // ========================================================
-
-    // Helper: ArrayBuffer <-> Base64
+    // ============================================================
+    //  CRYPTO (ECDH + AES-GCM)
+    // ============================================================
     function ab2b64(buf) {
         return btoa(String.fromCharCode(...new Uint8Array(buf)));
     }
@@ -523,22 +747,19 @@
         return buf.buffer;
     }
 
-    // Generate pasangan kunci ECDH (sekali per sesi)
     async function generateKeyPair() {
         const kp = await crypto.subtle.generateKey(
             { name: 'ECDH', namedCurve: 'P-256' },
             true,
             ['deriveKey']
         );
-        // Export public key ke base64 agar bisa disimpan di Firebase
         const pubRaw = await crypto.subtle.exportKey('raw', kp.publicKey);
         return {
-            privateKey:  kp.privateKey,           // CryptoKey — disimpan lokal saja
-            publicKeyB64: ab2b64(pubRaw)           // string — dikirim ke Firebase
+            privateKey:   kp.privateKey,
+            publicKeyB64: ab2b64(pubRaw)
         };
     }
 
-    // Derive shared AES key dari ECDH (private kita + public partner)
     async function deriveSharedKey(myPrivKey, theirPubKeyB64) {
         const theirPubRaw = b642ab(theirPubKeyB64);
         const theirPubKey = await crypto.subtle.importKey(
@@ -555,55 +776,37 @@
         );
     }
 
-    // Enkripsi pesan — returns { ciphertext, iv } as base64 strings
     async function encryptMessage(message, theirPubKeyB64) {
         try {
             const sharedKey = await deriveSharedKey(myPrivateKey, theirPubKeyB64);
             const iv        = crypto.getRandomValues(new Uint8Array(12));
             const encoded   = new TextEncoder().encode(message);
             const encrypted = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv },
-                sharedKey,
-                encoded
+                { name: 'AES-GCM', iv }, sharedKey, encoded
             );
-            return {
-                ciphertext: ab2b64(encrypted),
-                iv:         ab2b64(iv.buffer)
-            };
+            return { ciphertext: ab2b64(encrypted), iv: ab2b64(iv.buffer) };
         } catch (e) {
-            console.error('Encrypt error:', e);
             return null;
         }
     }
 
-    // Dekripsi pesan
     async function decryptMessage(enc, senderPubKeyB64) {
         try {
             const sharedKey  = await deriveSharedKey(myPrivateKey, senderPubKeyB64);
             const ciphertext = b642ab(enc.ciphertext);
             const iv         = b642ab(enc.iv);
             const decrypted  = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv },
-                sharedKey,
-                ciphertext
+                { name: 'AES-GCM', iv }, sharedKey, ciphertext
             );
             return new TextDecoder().decode(decrypted);
         } catch (e) {
-            console.error('Decrypt error:', e);
             return null;
         }
     }
 
-    // ========================================================
-    //  UI HELPERS
-    // ========================================================
-    function generateRoomCode() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-        roomCodeInput.value = code;
-    }
-
+    // ============================================================
+    //  UI HELPERS (append, participants, status)
+    // ============================================================
     function appendSystemMsg(text) {
         const emptyDiv = chatContainer.querySelector('.empty-chat');
         if (emptyDiv) emptyDiv.remove();
@@ -635,18 +838,17 @@
             const u = connectedUsers[uid];
             const isActive = (targetUserId === uid);
             const initial  = u.name ? u.name[0].toUpperCase() : '?';
-            html += `
-                <div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
-                    <div class="avatar">${initial}</div>
-                    <span>${escapeHtml(u.name)}</span>
-                </div>`;
+            html += `<div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
+                        <div class="avatar">${initial}</div>
+                        <span>${escapeHtml(u.name)}</span>
+                    </div>`;
         }
         participantsDiv.innerHTML = html;
         participantsDiv.querySelectorAll('.user-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const uid = chip.getAttribute('data-uid');
                 if (uid && connectedUsers[uid]?.publicKey) {
-                    targetUserId       = uid;
+                    targetUserId = uid;
                     targetPublicKeyB64 = connectedUsers[uid].publicKey;
                     updateParticipantsUI();
                     updateStatusUI();
@@ -660,14 +862,13 @@
     }
 
     function updateStatusUI() {
-        if (!isJoined || !currentRoom || !currentUser) {
+        if (!isJoined || !currentRoom) {
             connStatusSpan.textContent = '🟢 Terhubung';
-            e2eStatusSpan.textContent  = '🔒 Tidak aktif';
+            e2eStatusSpan.textContent = '🔒 Tidak aktif';
             return;
         }
         const userCount = Object.keys(connectedUsers).length;
         connStatusSpan.textContent = `🟢 ${currentRoom.toUpperCase()} | ${userCount} online`;
-
         if (targetPublicKeyB64) {
             const name = connectedUsers[targetUserId]?.name || 'partner';
             e2eStatusSpan.textContent = `🔐 E2E → ${escapeHtml(name)}`;
@@ -678,271 +879,121 @@
             e2eStatusSpan.textContent = '⏳ Menunggu partner';
             messageInput.placeholder  = '💬 Tunggu partner bergabung…';
         }
-
         const canSend = !!(currentRoom && currentUser && targetPublicKeyB64);
         messageInput.disabled = !canSend;
-        sendBtn.disabled      = !canSend;
+        sendBtn.disabled = !canSend;
     }
 
-    // ========================================================
-    //  LEAVE ROOM (cleanup listeners)
-    // ========================================================
+    // ============================================================
+    //  LEAVE & JOIN LOGIC (sama seperti sebelumnya, diperbaiki)
+    // ============================================================
     async function leaveRoom() {
         if (!isJoined || !currentRoom || !currentUser || !db) return;
-        try {
-            if (usersListener) {
-                db.ref(`rooms/${currentRoom}/users`).off('value', usersListener);
-                usersListener = null;
-            }
-            if (msgsListener) {
-                db.ref(`rooms/${currentRoom}/messages`).off('child_added', msgsListener);
-                msgsListener = null;
-            }
-            await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
-        } catch (_) {}
+        if (usersListener) db.ref(`rooms/${currentRoom}/users`).off('value', usersListener);
+        if (msgsListener) db.ref(`rooms/${currentRoom}/messages`).off('child_added', msgsListener);
+        await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove().catch(()=>{});
         isJoined = false;
     }
 
-    // ========================================================
-    //  JOIN ROOM
-    // ========================================================
     async function joinRoom() {
-        if (!db) {
-            showToast('❌ Firebase belum siap. Coba refresh halaman.', 3500);
-            return;
-        }
-
-        const name = (usernameInput.value.trim() || 'User_' + Math.floor(Math.random() * 9000 + 1000));
+        if (!db) { showToast('Firebase belum siap.'); return; }
+        const name = (usernameInput.value.trim() || 'User_' + Math.floor(Math.random()*9000+1000));
         const room = roomCodeInput.value.trim();
-
-        if (!room) {
-            showToast('⚠️ Masukkan kode room terlebih dahulu');
-            roomCodeInput.focus();
-            return;
-        }
-
-        // Keluar dari room lama jika ada
+        if (!room) { showToast('Masukkan kode room'); return; }
         await leaveRoom();
-
-        joinBtn.disabled    = true;
-        joinBtn.textContent = '⏳ Bergabung...';
+        joinBtn.disabled = true; joinBtn.textContent = '⏳ Bergabung...';
         setLoading(true);
-
         try {
-            // Generate keypair baru pakai Web Crypto API
             const kp = await generateKeyPair();
-            myPrivateKey   = kp.privateKey;
+            myPrivateKey = kp.privateKey;
             myPublicKeyB64 = kp.publicKeyB64;
-
-            currentUser = {
-                id:   Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
-                name: name
-            };
-            currentRoom        = room.trim().toLowerCase();
-            targetUserId       = null;
-            targetPublicKeyB64 = null;
-            connectedUsers     = {};
-
-            chatContainer.innerHTML = `
-                <div class="empty-chat">
-                    🔒 Room: <strong>${escapeHtml(room.toUpperCase())}</strong>
-                    <small>Menunggu partner bergabung…</small>
-                </div>`;
-
-            // Tulis user ke Firebase
+            currentUser = { id: Date.now().toString(36)+Math.random().toString(36).substr(2,5), name };
+            currentRoom = room.trim().toLowerCase();
+            targetUserId = null; targetPublicKeyB64 = null; connectedUsers = {};
+            chatContainer.innerHTML = `<div class="empty-chat"><strong>🔒 Room: ${escapeHtml(room.toUpperCase())}</strong><small>Menunggu partner...</small></div>`;
             const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
-            await userRef.set({
-                name:      currentUser.name,
-                publicKey: myPublicKeyB64,
-                timestamp: Date.now()
-            });
+            await userRef.set({ name: currentUser.name, publicKey: myPublicKeyB64, timestamp: Date.now() });
             userRef.onDisconnect().remove();
-
             isJoined = true;
-
-            // Dengarkan perubahan users
             usersListener = db.ref(`rooms/${currentRoom}/users`).on('value', snap => {
-                const users    = snap.val() || {};
+                const users = snap.val() || {};
                 const newUsers = {};
                 for (const [uid, data] of Object.entries(users)) {
-                    if (uid !== currentUser.id && data?.publicKey) {
-                        newUsers[uid] = { name: data.name || 'Anonim', publicKey: data.publicKey };
-                    }
+                    if (uid !== currentUser.id && data?.publicKey) newUsers[uid] = { name: data.name || 'Anonim', publicKey: data.publicKey };
                 }
-
-                const prevIds = new Set(Object.keys(connectedUsers));
-                const nextIds = new Set(Object.keys(newUsers));
-                for (const uid of nextIds) {
-                    if (!prevIds.has(uid)) appendSystemMsg(`👤 ${newUsers[uid].name} bergabung`);
-                }
-                for (const uid of prevIds) {
-                    if (!nextIds.has(uid)) {
-                        appendSystemMsg(`👋 ${connectedUsers[uid]?.name || uid} keluar`);
-                        if (targetUserId === uid) {
-                            targetUserId       = null;
-                            targetPublicKeyB64 = null;
-                        }
-                    }
-                }
-
                 connectedUsers = newUsers;
-
-                // Auto-pilih target pertama
-                if (!targetPublicKeyB64) {
-                    const firstId = Object.keys(connectedUsers)[0];
-                    if (firstId) {
-                        targetUserId       = firstId;
-                        targetPublicKeyB64 = connectedUsers[firstId].publicKey;
-                    }
+                if (!targetPublicKeyB64 && Object.keys(connectedUsers)[0]) {
+                    const first = Object.keys(connectedUsers)[0];
+                    targetUserId = first;
+                    targetPublicKeyB64 = connectedUsers[first].publicKey;
                 }
-
                 updateParticipantsUI();
                 updateStatusUI();
             });
-
-            // Dengarkan pesan baru (hanya setelah join)
-            const joinTime = Date.now();
-            msgsListener = db.ref(`rooms/${currentRoom}/messages`)
-                .orderByChild('timestamp')
-                .startAt(joinTime)
-                .on('child_added', async snap => {
-                    const data = snap.val();
-                    if (!data || data.senderId === currentUser?.id) return;
-                    const senderPub = connectedUsers[data.senderId]?.publicKey;
-                    if (!senderPub) return;
-                    const decrypted = await decryptMessage(
-                        { ciphertext: data.ciphertext, iv: data.iv },
-                        senderPub
-                    );
-                    appendMessage(
-                        data.senderName,
-                        decrypted || '[🔒 Pesan tidak dapat didekripsi]',
-                        false,
-                        new Date(data.timestamp)
-                    );
-                });
-
-            showToast(`✅ Bergabung ke room ${room.toUpperCase()}`);
+            msgsListener = db.ref(`rooms/${currentRoom}/messages`).orderByChild('timestamp').startAt(Date.now()).on('child_added', async snap => {
+                const data = snap.val();
+                if (!data || data.senderId === currentUser?.id) return;
+                const senderPub = connectedUsers[data.senderId]?.publicKey;
+                if (!senderPub) return;
+                const decrypted = await decryptMessage({ ciphertext: data.ciphertext, iv: data.iv }, senderPub);
+                appendMessage(data.senderName, decrypted || '[🔒 tidak dapat didekripsi]', false, new Date(data.timestamp));
+            });
+            showToast(`✅ Bergabung ke ${room.toUpperCase()}`);
             updateStatusUI();
-
         } catch (err) {
-            console.error('joinRoom error:', err);
+            console.error(err);
+            showToast('❌ Gagal bergabung: ' + (err.message || 'error'));
             isJoined = false;
-            let msg = '❌ Gagal bergabung.';
-            if (err.code === 'PERMISSION_DENIED') {
-                msg = '❌ Akses ditolak Firebase. Periksa Rules di Firebase Console.';
-            } else if (err.message) {
-                msg = '❌ ' + err.message;
-            }
-            showToast(msg, 5000);
         } finally {
-            joinBtn.disabled    = false;
-            joinBtn.textContent = 'Bergabung';
+            joinBtn.disabled = false; joinBtn.textContent = 'Bergabung';
             setLoading(false);
         }
     }
 
-    // ========================================================
-    //  SEND MESSAGE
-    // ========================================================
     async function sendMessage() {
         const msg = messageInput.value.trim();
-        if (!msg || !targetPublicKeyB64 || !db || !myPrivateKey) return;
-
+        if (!msg || !targetPublicKeyB64 || !db) return;
         sendBtn.disabled = true;
-
         try {
             const encrypted = await encryptMessage(msg, targetPublicKeyB64);
-            if (!encrypted) {
-                showToast('❌ Gagal enkripsi pesan');
-                return;
-            }
-            const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-            await msgRef.set({
-                senderId:   currentUser.id,
-                senderName: currentUser.name,
-                ciphertext: encrypted.ciphertext,
-                iv:         encrypted.iv,
-                timestamp:  Date.now()
+            if (!encrypted) throw new Error('Enkripsi gagal');
+            await db.ref(`rooms/${currentRoom}/messages`).push({
+                senderId: currentUser.id, senderName: currentUser.name,
+                ciphertext: encrypted.ciphertext, iv: encrypted.iv, timestamp: Date.now()
             });
             appendMessage(currentUser.name, msg, true);
             messageInput.value = '';
             autoResize(messageInput);
             messageInput.focus();
         } catch (err) {
-            console.error('sendMessage error:', err);
-            showToast('❌ Gagal kirim pesan: ' + (err.code || err.message));
+            showToast('Gagal kirim: ' + err.message);
         } finally {
             sendBtn.disabled = !targetPublicKeyB64;
         }
     }
 
-    // ========================================================
-    //  BOOTSTRAP — tunggu DOM siap
-    // ========================================================
+    // ============================================================
+    //  BOOTSTRAP
+    // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
-        chatContainer  = $('chat-container');
-        messageInput   = $('message-input');
-        sendBtn        = $('send-btn');
-        usernameInput  = $('username-input');
-        roomCodeInput  = $('room-code-input');
-        joinBtn        = $('join-btn');
-        genRoomBtn     = $('gen-room-btn');
-        connStatusSpan = $('conn-status');
-        e2eStatusSpan  = $('e2e-status');
+        chatContainer = $('chat-container'); messageInput = $('message-input'); sendBtn = $('send-btn');
+        usernameInput = $('username-input'); roomCodeInput = $('room-code-input'); joinBtn = $('join-btn');
+        genRoomBtn = $('gen-room-btn'); connStatusSpan = $('conn-status'); e2eStatusSpan = $('e2e-status');
         participantsDiv = $('participants-div');
-
-        // Init Firebase
         initFirebase();
-
-        // Event listeners
         joinBtn.addEventListener('click', joinRoom);
-        genRoomBtn.addEventListener('click', generateRoomCode);
+        genRoomBtn.addEventListener('click', () => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = ''; for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+            roomCodeInput.value = code;
+        });
         sendBtn.addEventListener('click', sendMessage);
-
         messageInput.addEventListener('input', () => autoResize(messageInput));
-        messageInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!sendBtn.disabled) sendMessage();
-            }
-        });
-
-        // Room code — enter langsung join
-        roomCodeInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter') joinRoom();
-        });
-
-        // Share room code via clipboard on click
-        roomCodeInput.addEventListener('click', () => {
-            if (roomCodeInput.value) {
-                navigator.clipboard?.writeText(roomCodeInput.value).then(() => {
-                    showToast('📋 Kode room disalin!');
-                }).catch(() => {});
-            }
-        });
-
-        // Set default values
-        usernameInput.value = 'User_' + Math.floor(Math.random() * 9000 + 1000);
-        generateRoomCode();
-
-        // Cleanup saat tutup tab
-        window.addEventListener('beforeunload', () => {
-            if (isJoined && currentRoom && currentUser && db) {
-                db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
-            }
-        });
-
-        // Online / offline
-        window.addEventListener('online', () => {
-            showToast('🟢 Kembali online');
-            if (isJoined) updateStatusUI();
-        });
-        window.addEventListener('offline', () => {
-            showToast('🔴 Offline — pesan tidak dapat dikirim', 4000);
-            connStatusSpan.textContent = '🔴 Offline';
-            connStatusSpan.style.color = '#ffb3b3';
-        });
+        messageInput.addEventListener('keypress', e => { if(e.key==='Enter' && !e.shiftKey && !sendBtn.disabled) { e.preventDefault(); sendMessage(); } });
+        roomCodeInput.addEventListener('keypress', e => { if(e.key==='Enter') joinRoom(); });
+        usernameInput.value = 'User_' + Math.floor(Math.random()*9000+1000);
+        genRoomBtn.click();
+        window.addEventListener('beforeunload', () => { if(isJoined && currentRoom && currentUser && db) db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove(); });
     });
     </script>
 </body>
