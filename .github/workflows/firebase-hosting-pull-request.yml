@@ -13,9 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LANDING_PAGE_CREATIFY }}
-          projectId: landing-page-creatify
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APLIKASI_CHAT_KNGEN }}
+          projectId: aplikasi-chat-kngen
