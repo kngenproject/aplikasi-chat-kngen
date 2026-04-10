@@ -15,45 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
-    <!-- TweetNaCl core -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js"></script>
-
-    <!-- nacl-util: inline implementation — tidak perlu CDN, selalu tersedia -->
-    <script>
-    // Inline nacl-util v0.15.1 (MIT) — menghindari masalah CDN
-    (function(nacl) {
-        'use strict';
-        function validateBase64(s) {
-            if (!/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/.test(s))
-                throw new TypeError('invalid base64');
-        }
-        nacl.util = {
-            decodeUTF8: function(s) {
-                if (typeof s !== 'string') throw new TypeError('expected string');
-                var i, d = unescape(encodeURIComponent(s)), b = new Uint8Array(d.length);
-                for (i = 0; i < d.length; i++) b[i] = d.charCodeAt(i);
-                return b;
-            },
-            encodeUTF8: function(arr) {
-                var i, s = [];
-                for (i = 0; i < arr.length; i++) s.push(String.fromCharCode(arr[i]));
-                return decodeURIComponent(escape(s.join('')));
-            },
-            encodeBase64: function(arr) {
-                if (!(arr instanceof Uint8Array)) arr = new Uint8Array(arr);
-                var i, s = [], len = arr.length;
-                for (i = 0; i < len; i++) s.push(String.fromCharCode(arr[i]));
-                return btoa(s.join(''));
-            },
-            decodeBase64: function(s) {
-                if (typeof s !== 'string') throw new TypeError('expected string');
-                var i, d = atob(s), b = new Uint8Array(d.length);
-                for (i = 0; i < d.length; i++) b[i] = d.charCodeAt(i);
-                return b;
-            }
-        };
-    })(typeof nacl !== 'undefined' ? nacl : (nacl = {}));
-    </script>
+    <!-- Tidak ada library enkripsi eksternal — pakai Web Crypto API bawaan browser -->
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -476,6 +438,11 @@
     }
 
     // ========================================================
+    //  NACL UTIL FALLBACK LOADER
+    //  CDN cdnjs versi 0.15.1 mungkin tidak tersedia —
+    //  fallback ke versi tweetnacl-util yang lebih umum.
+    // ========================================================
+    // ========================================================
     //  FIREBASE CONFIG
     // ========================================================
     const firebaseConfig = {
@@ -491,19 +458,20 @@
     // ========================================================
     //  APP STATE
     // ========================================================
-    let db            = null;
-    let currentRoom   = null;
-    let currentUser   = null;
-    let keyPair       = null;
-    let targetUserId  = null;
-    let targetPublicKey = null;
+    let db              = null;
+    let currentRoom     = null;
+    let currentUser     = null;
+    let myPrivateKey    = null;   // CryptoKey (ECDH private)
+    let myPublicKeyB64  = null;   // string base64 (dikirim ke Firebase)
+    let targetUserId    = null;
+    let targetPublicKeyB64 = null; // string base64 (dari Firebase)
     let connectedUsers  = {};
     let usersListener   = null;
     let msgsListener    = null;
     let isJoined        = false;
 
     // ========================================================
-    //  DOM REFS  (wait for DOMContentLoaded)
+    //  DOM REFS
     // ========================================================
     const $ = id => document.getElementById(id);
 
@@ -519,53 +487,88 @@
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
-
-            // Monitor connection state
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) {
-                    connStatusSpan.textContent = isJoined
-                        ? `🟢 ${currentRoom}`
-                        : '🟢 Terhubung';
+                    connStatusSpan.textContent = isJoined ? `🟢 ${currentRoom}` : '🟢 Terhubung';
                     connStatusSpan.style.color = '#dcf8c5';
                 } else {
                     connStatusSpan.textContent = '🔴 Terputus…';
                     connStatusSpan.style.color = '#ffb3b3';
                 }
             });
-
             connStatusSpan.textContent = '🟢 Terhubung';
             connStatusSpan.style.color = '#dcf8c5';
             return true;
         } catch (err) {
             connStatusSpan.textContent = '⚠️ Firebase Error';
             connStatusSpan.style.color = '#ffb3b3';
-            console.error('Firebase init error:', err);
             showToast('❌ Firebase gagal: ' + err.message, 4000);
             return false;
         }
     }
 
     // ========================================================
-    //  CRYPTO
+    //  CRYPTO — Web Crypto API (built-in browser, no library)
+    //  Algoritma: ECDH key exchange + AES-GCM 256-bit
     // ========================================================
-    function generateKeyPair() {
-        const kp = nacl.box.keyPair();
+
+    // Helper: ArrayBuffer <-> Base64
+    function ab2b64(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+    function b642ab(b64) {
+        const bin = atob(b64);
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        return buf.buffer;
+    }
+
+    // Generate pasangan kunci ECDH (sekali per sesi)
+    async function generateKeyPair() {
+        const kp = await crypto.subtle.generateKey(
+            { name: 'ECDH', namedCurve: 'P-256' },
+            true,
+            ['deriveKey']
+        );
+        // Export public key ke base64 agar bisa disimpan di Firebase
+        const pubRaw = await crypto.subtle.exportKey('raw', kp.publicKey);
         return {
-            publicKey: nacl.util.encodeBase64(kp.publicKey),
-            secretKey: nacl.util.encodeBase64(kp.secretKey)
+            privateKey:  kp.privateKey,           // CryptoKey — disimpan lokal saja
+            publicKeyB64: ab2b64(pubRaw)           // string — dikirim ke Firebase
         };
     }
 
-    function encryptMessage(message, recipientPublicKeyB64, senderSecretKeyB64) {
+    // Derive shared AES key dari ECDH (private kita + public partner)
+    async function deriveSharedKey(myPrivKey, theirPubKeyB64) {
+        const theirPubRaw = b642ab(theirPubKeyB64);
+        const theirPubKey = await crypto.subtle.importKey(
+            'raw', theirPubRaw,
+            { name: 'ECDH', namedCurve: 'P-256' },
+            false, []
+        );
+        return crypto.subtle.deriveKey(
+            { name: 'ECDH', public: theirPubKey },
+            myPrivKey,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    // Enkripsi pesan — returns { ciphertext, iv } as base64 strings
+    async function encryptMessage(message, theirPubKeyB64) {
         try {
-            const nonce      = nacl.randomBytes(nacl.box.nonceLength);
-            const pubKey     = nacl.util.decodeBase64(recipientPublicKeyB64);
-            const secKey     = nacl.util.decodeBase64(senderSecretKeyB64);
-            const msgBytes   = nacl.util.decodeUTF8(message);
-            const encrypted  = nacl.box(msgBytes, nonce, pubKey, secKey);
+            const sharedKey = await deriveSharedKey(myPrivateKey, theirPubKeyB64);
+            const iv        = crypto.getRandomValues(new Uint8Array(12));
+            const encoded   = new TextEncoder().encode(message);
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                sharedKey,
+                encoded
+            );
             return {
-                ciphertext: nacl.util.encodeBase64(encrypted),
-                nonce:      nacl.util.encodeBase64(nonce)
+                ciphertext: ab2b64(encrypted),
+                iv:         ab2b64(iv.buffer)
             };
         } catch (e) {
             console.error('Encrypt error:', e);
@@ -573,15 +576,18 @@
         }
     }
 
-    function decryptMessage(enc, senderPublicKeyB64, recipientSecretKeyB64) {
+    // Dekripsi pesan
+    async function decryptMessage(enc, senderPubKeyB64) {
         try {
-            const nonce      = nacl.util.decodeBase64(enc.nonce);
-            const ciphertext = nacl.util.decodeBase64(enc.ciphertext);
-            const pubKey     = nacl.util.decodeBase64(senderPublicKeyB64);
-            const secKey     = nacl.util.decodeBase64(recipientSecretKeyB64);
-            const decrypted  = nacl.box.open(ciphertext, nonce, pubKey, secKey);
-            if (!decrypted) return null;
-            return nacl.util.encodeUTF8(decrypted);
+            const sharedKey  = await deriveSharedKey(myPrivateKey, senderPubKeyB64);
+            const ciphertext = b642ab(enc.ciphertext);
+            const iv         = b642ab(enc.iv);
+            const decrypted  = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                sharedKey,
+                ciphertext
+            );
+            return new TextDecoder().decode(decrypted);
         } catch (e) {
             console.error('Decrypt error:', e);
             return null;
@@ -640,8 +646,8 @@
             chip.addEventListener('click', () => {
                 const uid = chip.getAttribute('data-uid');
                 if (uid && connectedUsers[uid]?.publicKey) {
-                    targetUserId    = uid;
-                    targetPublicKey = connectedUsers[uid].publicKey;
+                    targetUserId       = uid;
+                    targetPublicKeyB64 = connectedUsers[uid].publicKey;
                     updateParticipantsUI();
                     updateStatusUI();
                     messageInput.placeholder = `💬 Pesan ke ${connectedUsers[uid].name} (E2EE)`;
@@ -662,7 +668,7 @@
         const userCount = Object.keys(connectedUsers).length;
         connStatusSpan.textContent = `🟢 ${currentRoom.toUpperCase()} | ${userCount} online`;
 
-        if (targetPublicKey) {
+        if (targetPublicKeyB64) {
             const name = connectedUsers[targetUserId]?.name || 'partner';
             e2eStatusSpan.textContent = `🔐 E2E → ${escapeHtml(name)}`;
         } else if (userCount > 0) {
@@ -673,7 +679,7 @@
             messageInput.placeholder  = '💬 Tunggu partner bergabung…';
         }
 
-        const canSend = !!(currentRoom && currentUser && targetPublicKey);
+        const canSend = !!(currentRoom && currentUser && targetPublicKeyB64);
         messageInput.disabled = !canSend;
         sendBtn.disabled      = !canSend;
     }
@@ -715,12 +721,6 @@
             return;
         }
 
-        // Validasi nacl
-        if (typeof nacl === 'undefined' || !nacl.util || !nacl.box) {
-            showToast('❌ Library enkripsi (nacl) belum siap. Coba refresh halaman.', 4000);
-            return;
-        }
-
         // Keluar dari room lama jika ada
         await leaveRoom();
 
@@ -729,15 +729,19 @@
         setLoading(true);
 
         try {
+            // Generate keypair baru pakai Web Crypto API
+            const kp = await generateKeyPair();
+            myPrivateKey   = kp.privateKey;
+            myPublicKeyB64 = kp.publicKeyB64;
+
             currentUser = {
                 id:   Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
                 name: name
             };
-            currentRoom     = room.trim().toLowerCase();
-            keyPair         = generateKeyPair();
-            targetUserId    = null;
-            targetPublicKey = null;
-            connectedUsers  = {};
+            currentRoom        = room.trim().toLowerCase();
+            targetUserId       = null;
+            targetPublicKeyB64 = null;
+            connectedUsers     = {};
 
             chatContainer.innerHTML = `
                 <div class="empty-chat">
@@ -749,7 +753,7 @@
             const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
             await userRef.set({
                 name:      currentUser.name,
-                publicKey: keyPair.publicKey,
+                publicKey: myPublicKeyB64,
                 timestamp: Date.now()
             });
             userRef.onDisconnect().remove();
@@ -766,10 +770,8 @@
                     }
                 }
 
-                // Deteksi user baru / keluar
                 const prevIds = new Set(Object.keys(connectedUsers));
                 const nextIds = new Set(Object.keys(newUsers));
-
                 for (const uid of nextIds) {
                     if (!prevIds.has(uid)) appendSystemMsg(`👤 ${newUsers[uid].name} bergabung`);
                 }
@@ -777,20 +779,20 @@
                     if (!nextIds.has(uid)) {
                         appendSystemMsg(`👋 ${connectedUsers[uid]?.name || uid} keluar`);
                         if (targetUserId === uid) {
-                            targetUserId    = null;
-                            targetPublicKey = null;
+                            targetUserId       = null;
+                            targetPublicKeyB64 = null;
                         }
                     }
                 }
 
                 connectedUsers = newUsers;
 
-                // Auto-pilih target jika belum ada
-                if (!targetPublicKey) {
+                // Auto-pilih target pertama
+                if (!targetPublicKeyB64) {
                     const firstId = Object.keys(connectedUsers)[0];
                     if (firstId) {
-                        targetUserId    = firstId;
-                        targetPublicKey = connectedUsers[firstId].publicKey;
+                        targetUserId       = firstId;
+                        targetPublicKeyB64 = connectedUsers[firstId].publicKey;
                     }
                 }
 
@@ -798,21 +800,19 @@
                 updateStatusUI();
             });
 
-            // Dengarkan pesan baru
-            // Hanya ambil pesan setelah bergabung (bukan riwayat lama)
+            // Dengarkan pesan baru (hanya setelah join)
             const joinTime = Date.now();
             msgsListener = db.ref(`rooms/${currentRoom}/messages`)
                 .orderByChild('timestamp')
                 .startAt(joinTime)
-                .on('child_added', snap => {
+                .on('child_added', async snap => {
                     const data = snap.val();
                     if (!data || data.senderId === currentUser?.id) return;
                     const senderPub = connectedUsers[data.senderId]?.publicKey;
                     if (!senderPub) return;
-                    const decrypted = decryptMessage(
-                        { ciphertext: data.ciphertext, nonce: data.nonce },
-                        senderPub,
-                        keyPair.secretKey
+                    const decrypted = await decryptMessage(
+                        { ciphertext: data.ciphertext, iv: data.iv },
+                        senderPub
                     );
                     appendMessage(
                         data.senderName,
@@ -847,12 +847,12 @@
     // ========================================================
     async function sendMessage() {
         const msg = messageInput.value.trim();
-        if (!msg || !targetPublicKey || !db || !keyPair) return;
+        if (!msg || !targetPublicKeyB64 || !db || !myPrivateKey) return;
 
         sendBtn.disabled = true;
 
         try {
-            const encrypted = encryptMessage(msg, targetPublicKey, keyPair.secretKey);
+            const encrypted = await encryptMessage(msg, targetPublicKeyB64);
             if (!encrypted) {
                 showToast('❌ Gagal enkripsi pesan');
                 return;
@@ -862,7 +862,7 @@
                 senderId:   currentUser.id,
                 senderName: currentUser.name,
                 ciphertext: encrypted.ciphertext,
-                nonce:      encrypted.nonce,
+                iv:         encrypted.iv,
                 timestamp:  Date.now()
             });
             appendMessage(currentUser.name, msg, true);
@@ -873,7 +873,7 @@
             console.error('sendMessage error:', err);
             showToast('❌ Gagal kirim pesan: ' + (err.code || err.message));
         } finally {
-            sendBtn.disabled = !targetPublicKey;
+            sendBtn.disabled = !targetPublicKeyB64;
         }
     }
 
