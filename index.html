@@ -3,47 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="description" content="Aplikasi chat terenkripsi end-to-end dengan TweetNaCl dan Firebase - PWA Edition">
+    <meta name="description" content="Aplikasi chat terenkripsi end-to-end dengan TweetNaCl dan Firebase">
     <meta name="theme-color" content="#075e54">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SecureChat">
     <meta name="mobile-web-app-capable" content="yes">
-    
-    <link rel="manifest" href="data:application/json,{%22name%22:%22SecureChat%20E2EE%22,%22short_name%22:%22SecureChat%22,%22description%22:%22Chat%20Terenkripsi%20End-to-End%20dengan%20TweetNaCl%22,%22start_url%22:%22/%22,%22scope%22:%22/%22,%22display%22:%22standalone%22,%22theme_color%22:%22%23075e54%22,%22background_color%22:%22%23ffffff%22,%22orientation%22:%22portrait-primary%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20192%20192%27%3E%3Crect%20fill=%27%23075e54%27%20width=%27192%27%20height=%27192%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20font-size=%27120%27%20font-weight=%27bold%27%20fill=%27white%27%20text-anchor=%27middle%27%20dominant-baseline=%27central%27%3E💬%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22any%22},{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20512%20512%27%3E%3Crect%20fill=%27%23075e54%27%20width=%27512%27%20height=%27512%27%20rx=%27100%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20font-size=%27300%27%20font-weight=%27bold%27%20fill=%27white%27%20text-anchor=%27middle%27%20dominant-baseline=%27central%27%3E💬%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22maskable%22}]}">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23075e54' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>💬</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23075e54' width='180' height='180' rx='40'/><text x='90' y='90' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>💬</text></svg>">
-    
-    <title>SecureChat • WhatsApp Style • E2EE PWA</title>
-    
+    <title>SecureChat • E2EE</title>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-    
+
     <!-- TweetNaCl -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl-util/0.15.1/nacl-fast.min.js"
+            onerror="loadNaclUtil()"></script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html, body {
             height: 100%;
             background: #0a0a0a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Container utama menggunakan 100dvh untuk menangani toolbar dinamis */
         .app {
             display: flex;
             flex-direction: column;
@@ -55,7 +46,7 @@
             overflow: hidden;
         }
 
-        /* Header hijau WhatsApp */
+        /* ===== HEADER ===== */
         .whats-header {
             background: #075e54;
             padding: 12px 16px;
@@ -67,22 +58,12 @@
             gap: 8px;
             color: white;
             flex-shrink: 0;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .brand { display: flex; align-items: center; gap: 10px; }
         .brand .logo { font-size: 24px; }
         .brand h1 { font-size: 1.2rem; font-weight: 600; }
-
-        .header-right {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
+        .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .status-badge {
             background: rgba(255,255,255,0.2);
             padding: 4px 10px;
@@ -91,7 +72,7 @@
             font-weight: 500;
         }
         .encrypt-badge {
-            background: #25d36620;
+            background: rgba(37,211,102,0.2);
             padding: 4px 8px;
             border-radius: 20px;
             font-size: 0.65rem;
@@ -101,9 +82,9 @@
             color: #dcf8c5;
         }
 
-        /* Panel join */
+        /* ===== JOIN PANEL ===== */
         .join-panel {
-            background: #ffffffdd;
+            background: #ffffffee;
             backdrop-filter: blur(12px);
             padding: 12px 16px;
             border-bottom: 1px solid #e9edef;
@@ -113,87 +94,84 @@
             align-items: flex-end;
             flex-shrink: 0;
         }
-        .input-group {
-            flex: 1;
-            min-width: 120px;
-        }
+        .input-group { flex: 1; min-width: 110px; }
         .input-group label {
             font-size: 0.65rem;
             font-weight: 600;
             color: #54656f;
             display: block;
             margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .input-group input {
             width: 100%;
             background: white;
-            border: 1px solid #e9edef;
+            border: 1.5px solid #e9edef;
             border-radius: 24px;
             padding: 10px 16px;
             font-size: 0.9rem;
             outline: none;
+            transition: border-color 0.2s;
         }
         .input-group input:focus { border-color: #25d366; }
+
+        /* ===== BUTTONS ===== */
         button {
             background: #075e54;
             border: none;
             border-radius: 30px;
             padding: 10px 20px;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             color: white;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: opacity 0.15s, transform 0.1s;
+            white-space: nowrap;
         }
-        button:active { transform: scale(0.96); }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .btn-outline {
-            background: #e9edef;
-            color: #075e54;
-        }
+        button:hover:not(:disabled) { opacity: 0.88; }
+        button:active:not(:disabled) { transform: scale(0.96); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-outline { background: #e9edef; color: #075e54; }
 
-        /* Partisipan */
+        /* ===== PARTICIPANTS ===== */
         .participants-strip {
             background: #ffffffcc;
-            backdrop-filter: blur(8px);
             padding: 8px 16px;
             overflow-x: auto;
             white-space: nowrap;
             border-bottom: 1px solid #e9edef;
             flex-shrink: 0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        .participants-strip span {
+        .participants-label {
             font-size: 0.7rem;
             font-weight: 500;
             color: #54656f;
-            margin-right: 12px;
+            flex-shrink: 0;
+            margin-right: 8px;
         }
         .user-chip {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             background: white;
             border-radius: 30px;
-            padding: 4px 12px 4px 6px;
-            margin-right: 8px;
+            padding: 4px 12px 4px 4px;
+            margin-right: 6px;
             font-size: 0.75rem;
-            border: 1px solid #e9edef;
+            border: 1.5px solid #e9edef;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
         }
-        .user-chip:active {
-            transform: scale(0.95);
-        }
-        .user-chip.active {
-            background: #dcf8c5;
-            border-color: #25d366;
-        }
+        .user-chip:hover { border-color: #25d366; background: #f0fff6; }
+        .user-chip.active { background: #dcf8c5; border-color: #25d366; font-weight: 600; }
         .avatar {
-            width: 28px;
-            height: 28px;
+            width: 26px; height: 26px;
             background: #25d366;
             border-radius: 50%;
             display: inline-flex;
@@ -205,73 +183,53 @@
             flex-shrink: 0;
         }
 
-        /* Area chat — scroll di sini saja */
+        /* ===== CHAT AREA ===== */
         .chat-area {
             flex: 1;
             overflow-y: auto;
             padding: 16px 12px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            background-image: radial-gradient(circle at 10% 30%, rgba(0,0,0,0.02) 2%, transparent 2.5%);
-            background-size: 28px 28px;
+            gap: 6px;
             min-height: 0;
             padding-bottom: max(16px, env(safe-area-inset-bottom));
+            background: #efeae2;
         }
-
         .message {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            margin: 4px 0;
-            animation: slideUp 0.3s ease-out;
+            gap: 2px;
+            animation: slideUp 0.25s ease-out;
         }
-
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-
-        .message.own {
-            align-items: flex-end;
-        }
-
+        .message.own { align-items: flex-end; }
         .message .bubble {
-            padding: 10px 14px;
+            padding: 9px 13px;
             border-radius: 18px;
-            word-wrap: break-word;
-            max-width: 85%;
-            line-height: 1.4;
-            font-size: 0.95rem;
+            word-break: break-word;
+            max-width: 82%;
+            line-height: 1.45;
+            font-size: 0.93rem;
         }
-
         .message.own .bubble {
             background: #dcf8c5;
             color: #000;
             border-bottom-right-radius: 4px;
         }
-
         .message:not(.own) .bubble {
             background: white;
             color: #000;
             border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.08);
         }
-
         .message .meta {
-            font-size: 0.65rem;
-            color: #54656f;
-            padding: 0 12px;
-            display: flex;
-            gap: 4px;
+            font-size: 0.62rem;
+            color: #8696a0;
+            padding: 0 10px;
         }
-
         .empty-chat {
             display: flex;
             flex-direction: column;
@@ -281,153 +239,117 @@
             color: #54656f;
             text-align: center;
             font-size: 0.95rem;
+            gap: 6px;
+        }
+        .empty-chat small { font-size: 0.72rem; color: #8696a0; }
+
+        /* ===== SYSTEM MESSAGE ===== */
+        .sys-msg {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #54656f;
+            background: rgba(255,255,255,0.6);
+            border-radius: 8px;
+            padding: 4px 12px;
+            margin: 4px auto;
+            max-width: 90%;
         }
 
-        /* Panel input */
+        /* ===== INPUT PANEL ===== */
         .input-panel {
-            background: #fff;
+            background: #f0f2f5;
             border-top: 1px solid #e9edef;
-            padding: 12px 16px;
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            padding: 10px 12px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
             display: flex;
             gap: 8px;
             align-items: flex-end;
             flex-shrink: 0;
         }
-
         .input-panel textarea {
             flex: 1;
-            background: #f5f5f5;
-            border: 1px solid #e9edef;
+            background: white;
+            border: none;
             border-radius: 24px;
             padding: 10px 16px;
             font-size: 0.9rem;
             font-family: inherit;
             resize: none;
-            max-height: 80px;
+            max-height: 100px;
             outline: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            line-height: 1.4;
         }
-
-        .input-panel textarea:focus {
-            border-color: #25d366;
-            background: white;
+        .input-panel textarea:disabled {
+            background: #f5f5f5;
+            color: #aaa;
         }
-
         .input-panel button {
             flex-shrink: 0;
-            width: 40px;
-            height: 40px;
+            width: 44px; height: 44px;
             padding: 0;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            background: #25d366;
         }
+        .input-panel button:disabled { background: #ccc; }
 
-        .install-prompt {
+        /* ===== TOAST NOTIFICATION ===== */
+        #toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            border: 2px solid #075e54;
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            max-width: 300px;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(20px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .install-prompt button {
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 600px) {
-            .app {
-                max-width: 100%;
-                border-radius: 0;
-            }
-        }
-
-        /* Scrollbar styling */
-        .chat-area::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .chat-area::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .chat-area::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 3px;
-        }
-
-        .chat-area::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
-
-        /* DEBUG PANEL */
-        #debug-panel {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            max-height: 45vh;
-            background: rgba(0,0,0,0.92);
-            color: #00ff88;
-            font-family: monospace;
-            font-size: 11px;
+            top: 70px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.78);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.82rem;
             z-index: 9999;
-            display: flex;
-            flex-direction: column;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+            max-width: 90vw;
+            text-align: center;
         }
-        #debug-header {
-            display: flex;
-            justify-content: space-between;
+        #toast.show { opacity: 1; }
+
+        /* ===== LOADING OVERLAY ===== */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(7,94,84,0.15);
+            z-index: 500;
             align-items: center;
-            padding: 6px 12px;
-            background: #111;
-            border-top: 2px solid #00ff88;
-            cursor: pointer;
-            user-select: none;
+            justify-content: center;
         }
-        #debug-header span { color: #00ff88; font-weight: bold; font-size: 12px; }
-        #debug-header button {
-            background: #333; color: #fff; border: none;
-            border-radius: 4px; padding: 2px 8px; font-size: 11px;
-            cursor: pointer; margin-left: 8px;
+        #loading-overlay.show { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #075e54;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
         }
-        #debug-log {
-            overflow-y: auto;
-            padding: 8px 12px;
-            flex: 1;
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== SCROLLBAR ===== */
+        .chat-area::-webkit-scrollbar { width: 5px; }
+        .chat-area::-webkit-scrollbar-track { background: transparent; }
+        .chat-area::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .app { max-width: 100%; }
         }
-        .dlog { padding: 2px 0; border-bottom: 1px solid #1a1a1a; word-break: break-all; }
-        .dlog.info  { color: #00ff88; }
-        .dlog.warn  { color: #ffcc00; }
-        .dlog.error { color: #ff4444; }
-        .dlog.step  { color: #00cfff; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="app">
+
         <!-- Header -->
         <div class="whats-header">
             <div class="brand">
@@ -436,7 +358,7 @@
             </div>
             <div class="header-right">
                 <div class="status-badge">
-                    <span id="conn-status" style="color:#dcf8c5;">🔄 Menginisialisasi...</span>
+                    <span id="conn-status">🔄 Init...</span>
                 </div>
                 <div class="encrypt-badge">
                     <span>🔐</span>
@@ -447,13 +369,14 @@
 
         <!-- Join Panel -->
         <div class="join-panel">
-            <div class="input-group" style="flex: 1.2;">
+            <div class="input-group" style="flex:1.3">
                 <label>Nama Anda</label>
-                <input type="text" id="username-input" placeholder="Masukkan nama">
+                <input type="text" id="username-input" placeholder="Masukkan nama" maxlength="30" autocomplete="off">
             </div>
-            <div class="input-group" style="flex: 1;">
+            <div class="input-group" style="flex:1">
                 <label>Kode Room</label>
-                <input type="text" id="room-code-input" placeholder="Room code">
+                <input type="text" id="room-code-input" placeholder="Kode room" maxlength="10"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false">
             </div>
             <button id="gen-room-btn" class="btn-outline">⚙️ Generate</button>
             <button id="join-btn">Bergabung</button>
@@ -461,560 +384,559 @@
 
         <!-- Participants -->
         <div class="participants-strip">
-            <span>Pengguna aktif:</span>
-            <div id="participants-div"></div>
+            <span class="participants-label">Pengguna aktif:</span>
+            <div id="participants-div" style="display:inline"></div>
         </div>
 
         <!-- Chat Area -->
         <div class="chat-area" id="chat-container">
             <div class="empty-chat">
                 🔐 Bergabung ke room untuk mulai chatting
-                <span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span>
+                <small>Pesan terenkripsi end-to-end</small>
             </div>
         </div>
 
         <!-- Input Panel -->
         <div class="input-panel">
-            <textarea id="message-input" placeholder="💬 Pesan (E2EE)" maxlength="1024" rows="1" disabled></textarea>
-            <button id="send-btn" disabled>📤</button>
+            <textarea id="message-input" placeholder="💬 Bergabung ke room dulu..."
+                      maxlength="2000" rows="1" disabled></textarea>
+            <button id="send-btn" disabled title="Kirim">📤</button>
         </div>
     </div>
 
-    <!-- DEBUG PANEL -->
-    <div id="debug-panel">
-        <div id="debug-header" onclick="toggleDebug()">
-            <span>🐛 DEBUG LOG</span>
-            <div>
-                <button onclick="event.stopPropagation(); document.getElementById('debug-log').innerHTML=''">Clear</button>
-                <button onclick="event.stopPropagation(); toggleDebug()">▲ Hide</button>
-            </div>
-        </div>
-        <div id="debug-log"></div>
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <!-- Loading -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
     </div>
 
     <script>
-        // =================== DEBUG HELPER ===================
-        let debugVisible = true;
-        function toggleDebug() {
-            const log = document.getElementById('debug-log');
-            const btn = document.querySelector('#debug-header button:last-child');
-            debugVisible = !debugVisible;
-            log.style.display = debugVisible ? 'block' : 'none';
-            btn.textContent = debugVisible ? '▲ Hide' : '▼ Show';
-        }
-        function dlog(msg, type='info') {
-            const log = document.getElementById('debug-log');
-            const d = document.createElement('div');
-            d.className = `dlog ${type}`;
-            const t = new Date().toLocaleTimeString();
-            d.textContent = `[${t}] ${msg}`;
-            log.appendChild(d);
-            log.scrollTop = log.scrollHeight;
-            console[type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log'](msg);
-        }
+    // ========================================================
+    //  UTILITIES
+    // ========================================================
+    function showToast(msg, duration = 2500) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove('show'), duration);
+    }
 
-        // Override console untuk tangkap semua error
-        const _origError = console.error.bind(console);
-        console.error = (...args) => { dlog('ERROR: ' + args.join(' '), 'error'); _origError(...args); };
-        const _origWarn = console.warn.bind(console);
-        console.warn = (...args) => { dlog('WARN: ' + args.join(' '), 'warn'); _origWarn(...args); };
-        window.onerror = (msg, src, line) => { dlog(`JS ERROR: ${msg} (line ${line})`, 'error'); };
-        window.onunhandledrejection = (e) => { dlog(`PROMISE REJECTED: ${e.reason}`, 'error'); };
+    function setLoading(on) {
+        document.getElementById('loading-overlay').classList.toggle('show', on);
+    }
 
-        dlog('🚀 Halaman dimuat', 'step');
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
 
-        // =================== PWA SERVICE WORKER REGISTRATION ===================
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE_NAME = 'securechat-v1';
-                const urlsToCache = [
-                    '/',
-                    '/index.html',
-                    'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js',
-                    'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js',
-                    'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl.min.js',
-                    'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js'
-                ];
+    // Auto-resize textarea
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    }
 
-                self.addEventListener('install', (event) => {
-                    event.waitUntil(
-                        caches.open(CACHE_NAME).then((cache) => {
-                            return cache.addAll(urlsToCache).catch(() => {
-                                console.log('Some resources failed to cache (expected for offline-first)');
-                            });
-                        })
-                    );
-                    self.skipWaiting();
-                });
+    // ========================================================
+    //  NACL UTIL FALLBACK LOADER
+    //  CDN cdnjs versi 0.15.1 mungkin tidak tersedia —
+    //  fallback ke versi tweetnacl-util yang lebih umum.
+    // ========================================================
+    function loadNaclUtil() {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tweetnacl.js/1.0.3/tweetnacl-util.min.js';
+        document.head.appendChild(s);
+    }
 
-                self.addEventListener('activate', (event) => {
-                    event.waitUntil(
-                        caches.keys().then((cacheNames) => {
-                            return Promise.all(
-                                cacheNames.map((cacheName) => {
-                                    if (cacheName !== CACHE_NAME) {
-                                        return caches.delete(cacheName);
-                                    }
-                                })
-                            );
-                        })
-                    );
-                    self.clients.claim();
-                });
+    // ========================================================
+    //  FIREBASE CONFIG
+    // ========================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
+        authDomain: "aplikasi-chat-kngen.firebaseapp.com",
+        databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "aplikasi-chat-kngen",
+        storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
+        messagingSenderId: "858845228237",
+        appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84"
+    };
 
-                self.addEventListener('fetch', (event) => {
-                    if (event.request.method !== 'GET') {
-                        return;
-                    }
+    // ========================================================
+    //  APP STATE
+    // ========================================================
+    let db            = null;
+    let currentRoom   = null;
+    let currentUser   = null;
+    let keyPair       = null;
+    let targetUserId  = null;
+    let targetPublicKey = null;
+    let connectedUsers  = {};
+    let usersListener   = null;
+    let msgsListener    = null;
+    let isJoined        = false;
 
-                    event.respondWith(
-                        caches.match(event.request).then((response) => {
-                            if (response) {
-                                return response;
-                            }
+    // ========================================================
+    //  DOM REFS  (wait for DOMContentLoaded)
+    // ========================================================
+    const $ = id => document.getElementById(id);
 
-                            return fetch(event.request).then((response) => {
-                                if (!response || response.status !== 200 || response.type !== 'basic') {
-                                    return response;
-                                }
+    let chatContainer, messageInput, sendBtn,
+        usernameInput, roomCodeInput, joinBtn,
+        genRoomBtn, connStatusSpan, e2eStatusSpan,
+        participantsDiv;
 
-                                const responseToCache = response.clone();
-                                caches.open(CACHE_NAME).then((cache) => {
-                                    cache.put(event.request, responseToCache);
-                                });
-
-                                return response;
-                            }).catch(() => {
-                                return caches.match(event.request).then((cachedResponse) => {
-                                    return cachedResponse || new Response('Offline', { status: 503 });
-                                });
-                            });
-                        })
-                    );
-                });
-            `;
-
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-
-            navigator.serviceWorker.register(swUrl, { scope: '/' }).then((registration) => {
-                console.log('✅ Service Worker registered successfully', registration);
-            }).catch((error) => {
-                console.error('❌ Service Worker registration failed:', error);
-            });
-        }
-
-        // =================== PWA INSTALL PROMPT ===================
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            showInstallPrompt();
-        });
-
-        function showInstallPrompt() {
-            const prompt = document.createElement('div');
-            prompt.className = 'install-prompt';
-            prompt.innerHTML = `
-                <strong>📱 Install SecureChat</strong>
-                <p style="font-size: 0.85rem; margin: 8px 0; color: #666;">Gunakan sebagai aplikasi native di perangkat Anda</p>
-                <button id="install-btn" style="background: #25d366; margin: 8px 0 0 0; width: 100%;">Install Sekarang</button>
-                <button id="dismiss-btn" class="btn-outline" style="margin: 4px 0 0 0; width: 100%;">Nanti</button>
-            `;
-            document.body.appendChild(prompt);
-
-            document.getElementById('install-btn').addEventListener('click', () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('✅ PWA installed');
-                        }
-                        deferredPrompt = null;
-                        prompt.remove();
-                    });
-                }
-            });
-
-            document.getElementById('dismiss-btn').addEventListener('click', () => {
-                prompt.remove();
-            });
-        }
-
-        window.addEventListener('appinstalled', () => {
-            console.log('✅ App installed successfully');
-            deferredPrompt = null;
-        });
-
-        // =================== DOM ELEMENTS ===================
-        const chatContainer = document.getElementById('chat-container');
-        const messageInput = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        const usernameInput = document.getElementById('username-input');
-        const roomCodeInput = document.getElementById('room-code-input');
-        const joinBtn = document.getElementById('join-btn');
-        const genRoomBtn = document.getElementById('gen-room-btn');
-        const connStatusSpan = document.getElementById('conn-status');
-        const e2eStatusSpan = document.getElementById('e2e-status');
-        const participantsDiv = document.getElementById('participants-div');
-
-        // =================== ENCRYPTION SETUP ===================
-        let currentRoom = null;
-        let currentUser = null;
-        let keyPair = null;
-        let targetUserId = null;
-        let targetPublicKey = null;
-        let connectedUsers = {};
-
-        // Firebase configuration (⚠️ GANTI DENGAN CONFIG ANDA)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
-            authDomain: "aplikasi-chat-kngen.firebaseapp.com",
-            databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "aplikasi-chat-kngen",
-            storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
-            messagingSenderId: "858845228237",
-            appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84"
-        };
-
-        let db = null;
-
-        // Initialize Firebase dengan error handling
-        dlog('🔥 Memulai inisialisasi Firebase...', 'step');
-        dlog(`📋 Project: ${firebaseConfig.projectId}`, 'info');
-        dlog(`🌐 DB URL: ${firebaseConfig.databaseURL}`, 'info');
+    // ========================================================
+    //  FIREBASE INIT
+    // ========================================================
+    function initFirebase() {
         try {
-            dlog('Memanggil firebase.initializeApp...', 'info');
             firebase.initializeApp(firebaseConfig);
-            dlog('✅ initializeApp berhasil', 'info');
-            dlog('Memanggil firebase.database()...', 'info');
             db = firebase.database();
-            dlog('✅ Database instance dibuat', 'info');
 
-            // Test koneksi nyata ke Firebase
-            dlog('🔌 Mengetes koneksi ke Firebase RTDB...', 'step');
-            const connRef = db.ref('.info/connected');
-            connRef.on('value', (snap) => {
+            // Monitor connection state
+            db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) {
-                    dlog('✅ FIREBASE RTDB: TERHUBUNG!', 'info');
+                    connStatusSpan.textContent = isJoined
+                        ? `🟢 ${currentRoom}`
+                        : '🟢 Terhubung';
+                    connStatusSpan.style.color = '#dcf8c5';
                 } else {
-                    dlog('⚠️ FIREBASE RTDB: Tidak terhubung / menunggu...', 'warn');
+                    connStatusSpan.textContent = '🔴 Terputus…';
+                    connStatusSpan.style.color = '#ffb3b3';
                 }
             });
 
-            // Test baca rules
-            db.ref('rooms').limitToFirst(1).once('value')
-                .then(() => dlog('✅ Firebase READ: Berhasil (rules OK)', 'info'))
-                .catch(e => dlog(`❌ Firebase READ ERROR: ${e.code} - ${e.message}`, 'error'));
-
-            connStatusSpan.innerText = '🟢 Connected';
+            connStatusSpan.textContent = '🟢 Terhubung';
             connStatusSpan.style.color = '#dcf8c5';
-        } catch (error) {
-            dlog(`❌ Firebase init GAGAL: ${error.message}`, 'error');
-            console.error('❌ Firebase initialization error:', error);
-            connStatusSpan.innerText = '⚠️ Config error';
+            return true;
+        } catch (err) {
+            connStatusSpan.textContent = '⚠️ Firebase Error';
             connStatusSpan.style.color = '#ffb3b3';
-            alert('⚠️ Firebase belum dikonfigurasi. Edit firebaseConfig di script.');
+            console.error('Firebase init error:', err);
+            showToast('❌ Firebase gagal: ' + err.message, 4000);
+            return false;
         }
+    }
 
-        // Cek library
-        dlog(`📦 nacl: ${typeof nacl !== 'undefined' ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof nacl !== 'undefined' ? 'info' : 'error');
-        dlog(`📦 nacl.util: ${typeof nacl !== 'undefined' && nacl.util ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof nacl !== 'undefined' && nacl.util ? 'info' : 'error');
-        dlog(`📦 firebase: ${typeof firebase !== 'undefined' ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof firebase !== 'undefined' ? 'info' : 'error');
+    // ========================================================
+    //  CRYPTO
+    // ========================================================
+    function generateKeyPair() {
+        // nacl.util fallback: some CDN versions expose util on nacl directly,
+        // others expose it globally as naclUtil.
+        const util = (typeof nacl !== 'undefined' && nacl.util)
+                   ? nacl.util
+                   : (typeof naclUtil !== 'undefined' ? naclUtil : null);
+        if (!util) throw new Error('nacl.util tidak tersedia');
 
-        // =================== ENCRYPTION FUNCTIONS ===================
-        function generateKeyPair() {
-            const keyPair = nacl.box.keyPair();
+        const kp = nacl.box.keyPair();
+        return {
+            publicKey: util.encodeBase64(kp.publicKey),
+            secretKey: util.encodeBase64(kp.secretKey),
+            _pub: kp.publicKey,
+            _sec: kp.secretKey
+        };
+    }
+
+    function getUtil() {
+        if (typeof nacl !== 'undefined' && nacl.util) return nacl.util;
+        if (typeof naclUtil !== 'undefined') return naclUtil;
+        throw new Error('nacl.util tidak ditemukan');
+    }
+
+    function encryptMessage(message, recipientPublicKeyB64, senderSecretKeyB64) {
+        try {
+            const util = getUtil();
+            const nonce   = nacl.randomBytes(nacl.box.nonceLength);
+            const pubKey  = util.decodeBase64(recipientPublicKeyB64);
+            const secKey  = util.decodeBase64(senderSecretKeyB64);
+            const msgBytes = util.decodeUTF8(message);
+            const encrypted = nacl.box(msgBytes, nonce, pubKey, secKey);
             return {
-                publicKey: nacl.util.encodeBase64(keyPair.publicKey),
-                secretKey: nacl.util.encodeBase64(keyPair.secretKey)
+                ciphertext: util.encodeBase64(encrypted),
+                nonce: util.encodeBase64(nonce)
             };
+        } catch (e) {
+            console.error('Encrypt error:', e);
+            return null;
         }
+    }
 
-        function encryptMessage(message, recipientPublicKey, senderSecretKey) {
-            try {
-                const nonce = nacl.randomBytes(nacl.box.nonceLength);
-                const pubKey = nacl.util.decodeBase64(recipientPublicKey);
-                const secKey = nacl.util.decodeBase64(senderSecretKey);
-                const messageBytes = nacl.util.decodeUTF8(message);
-
-                const encrypted = nacl.box(messageBytes, nonce, pubKey, secKey);
-
-                return {
-                    ciphertext: nacl.util.encodeBase64(encrypted),
-                    nonce: nacl.util.encodeBase64(nonce)
-                };
-            } catch (error) {
-                console.error('❌ Encryption error:', error);
-                return null;
-            }
+    function decryptMessage(enc, senderPublicKeyB64, recipientSecretKeyB64) {
+        try {
+            const util = getUtil();
+            const nonce      = util.decodeBase64(enc.nonce);
+            const ciphertext = util.decodeBase64(enc.ciphertext);
+            const pubKey     = util.decodeBase64(senderPublicKeyB64);
+            const secKey     = util.decodeBase64(recipientSecretKeyB64);
+            const decrypted  = nacl.box.open(ciphertext, nonce, pubKey, secKey);
+            if (!decrypted) return null;
+            return util.encodeUTF8(decrypted);
+        } catch (e) {
+            console.error('Decrypt error:', e);
+            return null;
         }
+    }
 
-        function decryptMessage(encryptedData, senderPublicKey, recipientSecretKey) {
-            try {
-                const nonce = nacl.util.decodeBase64(encryptedData.nonce);
-                const ciphertext = nacl.util.decodeBase64(encryptedData.ciphertext);
-                const pubKey = nacl.util.decodeBase64(senderPublicKey);
-                const secKey = nacl.util.decodeBase64(recipientSecretKey);
+    // ========================================================
+    //  UI HELPERS
+    // ========================================================
+    function generateRoomCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        roomCodeInput.value = code;
+    }
 
-                const decrypted = nacl.box.open(ciphertext, nonce, pubKey, secKey);
-                if (!decrypted) return null;
+    function appendSystemMsg(text) {
+        const emptyDiv = chatContainer.querySelector('.empty-chat');
+        if (emptyDiv) emptyDiv.remove();
+        const d = document.createElement('div');
+        d.className = 'sys-msg';
+        d.textContent = text;
+        chatContainer.appendChild(d);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-                return nacl.util.encodeUTF8(decrypted);
-            } catch (error) {
-                console.error('❌ Decryption error:', error);
-                return null;
-            }
+    function appendMessage(senderName, text, isOwn, timestamp = new Date()) {
+        const emptyDiv = chatContainer.querySelector('.empty-chat');
+        if (emptyDiv) emptyDiv.remove();
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
+        const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        msgDiv.innerHTML = `
+            <div class="bubble">${escapeHtml(text)}</div>
+            <div class="meta">${isOwn ? 'Anda' : escapeHtml(senderName)} • ${timeStr}</div>
+        `;
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function updateParticipantsUI() {
+        const userIds = Object.keys(connectedUsers).sort();
+        let html = '';
+        for (const uid of userIds) {
+            const u = connectedUsers[uid];
+            const isActive = (targetUserId === uid);
+            const initial  = u.name ? u.name[0].toUpperCase() : '?';
+            html += `
+                <div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
+                    <div class="avatar">${initial}</div>
+                    <span>${escapeHtml(u.name)}</span>
+                </div>`;
         }
-
-        // =================== UI FUNCTIONS ===================
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function generateRoomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            roomCodeInput.value = code;
-        }
-
-        function updateParticipantsUI() {
-            const userIds = Object.keys(connectedUsers).sort();
-            let html = '';
-            for (let uid of userIds) {
-                const u = connectedUsers[uid];
-                const isActive = (targetUserId === uid);
-                const initial = u.name ? u.name[0].toUpperCase() : '?';
-                html += `
-                    <div class="user-chip ${isActive ? 'active' : ''}" data-uid="${uid}">
-                        <div class="avatar">${initial}</div>
-                        <span>${escapeHtml(u.name)}</span>
-                    </div>
-                `;
-            }
-            participantsDiv.innerHTML = html;
-            document.querySelectorAll('.user-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    const uid = chip.getAttribute('data-uid');
-                    if (uid && connectedUsers[uid]?.publicKey) {
-                        targetUserId = uid;
-                        targetPublicKey = connectedUsers[uid].publicKey;
-                        updateParticipantsUI();
-                        updateStatusUI();
-                        messageInput.placeholder = `💬 Pesan ke ${connectedUsers[uid].name} (E2EE)`;
-                        messageInput.disabled = false;
-                        sendBtn.disabled = false;
-                    }
-                });
+        participantsDiv.innerHTML = html;
+        participantsDiv.querySelectorAll('.user-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const uid = chip.getAttribute('data-uid');
+                if (uid && connectedUsers[uid]?.publicKey) {
+                    targetUserId    = uid;
+                    targetPublicKey = connectedUsers[uid].publicKey;
+                    updateParticipantsUI();
+                    updateStatusUI();
+                    messageInput.placeholder = `💬 Pesan ke ${connectedUsers[uid].name} (E2EE)`;
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                    messageInput.focus();
+                }
             });
+        });
+    }
+
+    function updateStatusUI() {
+        if (!isJoined || !currentRoom || !currentUser) {
+            connStatusSpan.textContent = '🟢 Terhubung';
+            e2eStatusSpan.textContent  = '🔒 Tidak aktif';
+            return;
+        }
+        const userCount = Object.keys(connectedUsers).length;
+        connStatusSpan.textContent = `🟢 ${currentRoom.toUpperCase()} | ${userCount} online`;
+
+        if (targetPublicKey) {
+            const name = connectedUsers[targetUserId]?.name || 'partner';
+            e2eStatusSpan.textContent = `🔐 E2E → ${escapeHtml(name)}`;
+        } else if (userCount > 0) {
+            e2eStatusSpan.textContent = '⚠️ Pilih partner';
+            messageInput.placeholder  = '👆 Klik nama user di atas';
+        } else {
+            e2eStatusSpan.textContent = '⏳ Menunggu partner';
+            messageInput.placeholder  = '💬 Tunggu partner bergabung…';
         }
 
-        function appendMessage(senderName, text, isOwn, timestamp = new Date()) {
-            const emptyDiv = chatContainer.querySelector('.empty-chat');
-            if (emptyDiv) emptyDiv.remove();
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${isOwn ? 'own' : ''}`;
-            const timeStr = timestamp.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-            msgDiv.innerHTML = `
-                <div class="bubble">${escapeHtml(text)}</div>
-                <div class="meta">${isOwn ? 'Anda' : escapeHtml(senderName)} • ${timeStr}</div>
-            `;
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        const canSend = !!(currentRoom && currentUser && targetPublicKey);
+        messageInput.disabled = !canSend;
+        sendBtn.disabled      = !canSend;
+    }
+
+    // ========================================================
+    //  LEAVE ROOM (cleanup listeners)
+    // ========================================================
+    async function leaveRoom() {
+        if (!isJoined || !currentRoom || !currentUser || !db) return;
+        try {
+            if (usersListener) {
+                db.ref(`rooms/${currentRoom}/users`).off('value', usersListener);
+                usersListener = null;
+            }
+            if (msgsListener) {
+                db.ref(`rooms/${currentRoom}/messages`).off('child_added', msgsListener);
+                msgsListener = null;
+            }
+            await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
+        } catch (_) {}
+        isJoined = false;
+    }
+
+    // ========================================================
+    //  JOIN ROOM
+    // ========================================================
+    async function joinRoom() {
+        if (!db) {
+            showToast('❌ Firebase belum siap. Coba refresh halaman.', 3500);
+            return;
         }
 
-        function updateStatusUI() {
-            if (!currentRoom || !currentUser) {
-                connStatusSpan.innerText = '⚫ Offline';
-                e2eStatusSpan.innerText = '🔒 Tidak aktif';
-                return;
-            }
-            const userCount = Object.keys(connectedUsers).length;
-            connStatusSpan.innerText = `🟢 ${currentRoom} | ${userCount} partner`;
-            if (targetPublicKey) {
-                const targetName = connectedUsers[targetUserId]?.name || 'partner';
-                e2eStatusSpan.innerText = `🔐 E2E ke ${escapeHtml(targetName)}`;
-            } else if (userCount > 0) {
-                e2eStatusSpan.innerText = `⚠️ Pilih partner`;
-            } else {
-                e2eStatusSpan.innerText = `⏳ Menunggu partner`;
-            }
-            const canSend = (currentRoom && currentUser && targetPublicKey);
-            messageInput.disabled = !canSend;
-            sendBtn.disabled = !canSend;
-            if (!canSend && userCount > 0 && !targetPublicKey) {
-                messageInput.placeholder = "👆 Klik salah satu user di atas";
-            }
+        const name = (usernameInput.value.trim() || 'User_' + Math.floor(Math.random() * 9000 + 1000));
+        const room = roomCodeInput.value.trim();
+
+        if (!room) {
+            showToast('⚠️ Masukkan kode room terlebih dahulu');
+            roomCodeInput.focus();
+            return;
         }
 
-        async function sendMessage() {
-            const msg = messageInput.value.trim();
-            if (!msg || !targetPublicKey || !db) return;
-            const encrypted = encryptMessage(msg, targetPublicKey, keyPair.secretKey);
-            if (!encrypted) {
-                alert("Gagal enkripsi. Cek console untuk detail.");
-                return;
-            }
-            try {
-                const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-                await msgRef.set({
-                    senderId: currentUser.id,
-                    senderName: currentUser.name,
-                    ciphertext: encrypted.ciphertext,
-                    nonce: encrypted.nonce,
-                    timestamp: Date.now()
-                });
-                appendMessage(currentUser.name, msg, true);
-                messageInput.value = '';
-                messageInput.focus();
-            } catch (error) {
-                console.error("Send message error:", error);
-                alert("Gagal mengirim pesan. Cek koneksi Firebase.");
-            }
+        // Validasi nacl
+        try { getUtil(); } catch (e) {
+            showToast('❌ Library enkripsi belum siap. Tunggu sebentar dan coba lagi.', 4000);
+            return;
         }
 
-        async function joinRoom() {
-            dlog('🚪 joinRoom() dipanggil', 'step');
-            if (!db) {
-                dlog('❌ db = null! Firebase tidak terinisialisasi', 'error');
-                alert("Firebase belum diinisialisasi. Cek konfigurasi.");
-                return;
-            }
-            dlog('✅ db OK', 'info');
-            let name = usernameInput.value.trim();
-            let room = roomCodeInput.value.trim();
-            dlog(`👤 Nama: "${name}", 🏠 Room: "${room}"`, 'info');
-            if (!name) name = "User_" + Math.floor(Math.random() * 1000);
-            if (!room) {
-                dlog('❌ Room kosong!', 'error');
-                alert("Masukkan kode room atau generate terlebih dahulu");
-                return;
-            }
-            if (currentRoom && currentUser) {
-                await db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
-            }
+        // Keluar dari room lama jika ada
+        await leaveRoom();
+
+        joinBtn.disabled    = true;
+        joinBtn.textContent = '⏳ Bergabung...';
+        setLoading(true);
+
+        try {
             currentUser = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                name: name,
+                id:   Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                name: name
             };
-            currentRoom = room.toLowerCase();
-            keyPair = generateKeyPair();
-            targetUserId = null;
+            currentRoom     = room.trim().toLowerCase();
+            keyPair         = generateKeyPair();
+            targetUserId    = null;
             targetPublicKey = null;
-            connectedUsers = {};
-            
-            chatContainer.innerHTML = `<div class="empty-chat">🔒 Bergabung ke room "${escapeHtml(room)}"<br><span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span></div>`;
-            
-            try {
-                dlog(`📝 Menulis ke Firebase: rooms/${currentRoom}/users/${currentUser.id}`, 'info');
-                const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
-                await userRef.set({
-                    name: currentUser.name,
-                    publicKey: keyPair.publicKey,
-                    timestamp: Date.now()
-                });
-                dlog('✅ Data user berhasil ditulis ke Firebase!', 'info');
-                userRef.onDisconnect().remove();
-                
-                const usersRef = db.ref(`rooms/${currentRoom}/users`);
-                usersRef.off();
-                usersRef.on('value', (snap) => {
-                    const users = snap.val() || {};
-                    const newUsers = {};
-                    for (let [uid, data] of Object.entries(users)) {
-                        if (uid !== currentUser.id && data?.publicKey) {
-                            newUsers[uid] = { name: data.name, publicKey: data.publicKey };
-                        }
+            connectedUsers  = {};
+
+            chatContainer.innerHTML = `
+                <div class="empty-chat">
+                    🔒 Room: <strong>${escapeHtml(room.toUpperCase())}</strong>
+                    <small>Menunggu partner bergabung…</small>
+                </div>`;
+
+            // Tulis user ke Firebase
+            const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
+            await userRef.set({
+                name:      currentUser.name,
+                publicKey: keyPair.publicKey,
+                timestamp: Date.now()
+            });
+            userRef.onDisconnect().remove();
+
+            isJoined = true;
+
+            // Dengarkan perubahan users
+            usersListener = db.ref(`rooms/${currentRoom}/users`).on('value', snap => {
+                const users    = snap.val() || {};
+                const newUsers = {};
+                for (const [uid, data] of Object.entries(users)) {
+                    if (uid !== currentUser.id && data?.publicKey) {
+                        newUsers[uid] = { name: data.name || 'Anonim', publicKey: data.publicKey };
                     }
-                    connectedUsers = newUsers;
-                    if (!targetPublicKey && Object.keys(connectedUsers).length > 0) {
-                        const firstId = Object.keys(connectedUsers)[0];
-                        targetUserId = firstId;
-                        targetPublicKey = connectedUsers[firstId].publicKey;
-                    } else if (Object.keys(connectedUsers).length === 0) {
-                        targetPublicKey = null;
-                        targetUserId = null;
-                    } else if (targetUserId && !connectedUsers[targetUserId]) {
-                        const firstId = Object.keys(connectedUsers)[0];
-                        if (firstId) {
-                            targetUserId = firstId;
-                            targetPublicKey = connectedUsers[firstId].publicKey;
-                        } else {
+                }
+
+                // Deteksi user baru / keluar
+                const prevIds = new Set(Object.keys(connectedUsers));
+                const nextIds = new Set(Object.keys(newUsers));
+
+                for (const uid of nextIds) {
+                    if (!prevIds.has(uid)) appendSystemMsg(`👤 ${newUsers[uid].name} bergabung`);
+                }
+                for (const uid of prevIds) {
+                    if (!nextIds.has(uid)) {
+                        appendSystemMsg(`👋 ${connectedUsers[uid]?.name || uid} keluar`);
+                        if (targetUserId === uid) {
+                            targetUserId    = null;
                             targetPublicKey = null;
                         }
                     }
-                    updateParticipantsUI();
-                    updateStatusUI();
-                });
-                
-                const msgListener = db.ref(`rooms/${currentRoom}/messages`);
-                msgListener.off();
-                msgListener.on('child_added', (snap) => {
+                }
+
+                connectedUsers = newUsers;
+
+                // Auto-pilih target jika belum ada
+                if (!targetPublicKey) {
+                    const firstId = Object.keys(connectedUsers)[0];
+                    if (firstId) {
+                        targetUserId    = firstId;
+                        targetPublicKey = connectedUsers[firstId].publicKey;
+                    }
+                }
+
+                updateParticipantsUI();
+                updateStatusUI();
+            });
+
+            // Dengarkan pesan baru
+            // Hanya ambil pesan setelah bergabung (bukan riwayat lama)
+            const joinTime = Date.now();
+            msgsListener = db.ref(`rooms/${currentRoom}/messages`)
+                .orderByChild('timestamp')
+                .startAt(joinTime)
+                .on('child_added', snap => {
                     const data = snap.val();
                     if (!data || data.senderId === currentUser?.id) return;
                     const senderPub = connectedUsers[data.senderId]?.publicKey;
                     if (!senderPub) return;
-                    const decrypted = decryptMessage({ ciphertext: data.ciphertext, nonce: data.nonce }, senderPub, keyPair.secretKey);
-                    if (decrypted) {
-                        appendMessage(data.senderName, decrypted, false, new Date(data.timestamp));
-                    } else {
-                        appendMessage(data.senderName, "[🔒 Pesan tidak dapat didekripsi]", false, new Date(data.timestamp));
-                    }
+                    const decrypted = decryptMessage(
+                        { ciphertext: data.ciphertext, nonce: data.nonce },
+                        senderPub,
+                        keyPair.secretKey
+                    );
+                    appendMessage(
+                        data.senderName,
+                        decrypted || '[🔒 Pesan tidak dapat didekripsi]',
+                        false,
+                        new Date(data.timestamp)
+                    );
                 });
-                
-                updateStatusUI();
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-            } catch (error) {
-                dlog(`❌ JOIN ERROR: ${error.code} - ${error.message}`, 'error');
-                console.error("Join room error:", error);
-                alert("Gagal bergabung ke room. Cek konfigurasi Firebase.");
-            }
-        }
 
+            showToast(`✅ Bergabung ke room ${room.toUpperCase()}`);
+            updateStatusUI();
+
+        } catch (err) {
+            console.error('joinRoom error:', err);
+            isJoined = false;
+            let msg = '❌ Gagal bergabung.';
+            if (err.code === 'PERMISSION_DENIED') {
+                msg = '❌ Akses ditolak Firebase. Periksa Rules di Firebase Console.';
+            } else if (err.message) {
+                msg = '❌ ' + err.message;
+            }
+            showToast(msg, 5000);
+        } finally {
+            joinBtn.disabled    = false;
+            joinBtn.textContent = 'Bergabung';
+            setLoading(false);
+        }
+    }
+
+    // ========================================================
+    //  SEND MESSAGE
+    // ========================================================
+    async function sendMessage() {
+        const msg = messageInput.value.trim();
+        if (!msg || !targetPublicKey || !db || !keyPair) return;
+
+        sendBtn.disabled = true;
+
+        try {
+            const encrypted = encryptMessage(msg, targetPublicKey, keyPair.secretKey);
+            if (!encrypted) {
+                showToast('❌ Gagal enkripsi pesan');
+                return;
+            }
+            const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+            await msgRef.set({
+                senderId:   currentUser.id,
+                senderName: currentUser.name,
+                ciphertext: encrypted.ciphertext,
+                nonce:      encrypted.nonce,
+                timestamp:  Date.now()
+            });
+            appendMessage(currentUser.name, msg, true);
+            messageInput.value = '';
+            autoResize(messageInput);
+            messageInput.focus();
+        } catch (err) {
+            console.error('sendMessage error:', err);
+            showToast('❌ Gagal kirim pesan: ' + (err.code || err.message));
+        } finally {
+            sendBtn.disabled = !targetPublicKey;
+        }
+    }
+
+    // ========================================================
+    //  BOOTSTRAP — tunggu DOM siap
+    // ========================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        chatContainer  = $('chat-container');
+        messageInput   = $('message-input');
+        sendBtn        = $('send-btn');
+        usernameInput  = $('username-input');
+        roomCodeInput  = $('room-code-input');
+        joinBtn        = $('join-btn');
+        genRoomBtn     = $('gen-room-btn');
+        connStatusSpan = $('conn-status');
+        e2eStatusSpan  = $('e2e-status');
+        participantsDiv = $('participants-div');
+
+        // Init Firebase
+        initFirebase();
+
+        // Event listeners
         joinBtn.addEventListener('click', joinRoom);
         genRoomBtn.addEventListener('click', generateRoomCode);
         sendBtn.addEventListener('click', sendMessage);
-        dlog('✅ Event listeners terpasang (joinBtn, genRoomBtn, sendBtn)', 'info');
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled) {
+
+        messageInput.addEventListener('input', () => autoResize(messageInput));
+        messageInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                if (!sendBtn.disabled) sendMessage();
             }
         });
-        
-        usernameInput.value = "User_" + Math.floor(Math.random() * 900 + 100);
+
+        // Room code — enter langsung join
+        roomCodeInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') joinRoom();
+        });
+
+        // Share room code via clipboard on click
+        roomCodeInput.addEventListener('click', () => {
+            if (roomCodeInput.value) {
+                navigator.clipboard?.writeText(roomCodeInput.value).then(() => {
+                    showToast('📋 Kode room disalin!');
+                }).catch(() => {});
+            }
+        });
+
+        // Set default values
+        usernameInput.value = 'User_' + Math.floor(Math.random() * 9000 + 1000);
         generateRoomCode();
-        
+
+        // Cleanup saat tutup tab
         window.addEventListener('beforeunload', () => {
-            if (currentRoom && currentUser && db) {
+            if (isJoined && currentRoom && currentUser && db) {
                 db.ref(`rooms/${currentRoom}/users/${currentUser.id}`).remove();
             }
         });
 
-        // =================== ONLINE/OFFLINE DETECTION ===================
+        // Online / offline
         window.addEventListener('online', () => {
-            console.log('🟢 Back online');
-            connStatusSpan.style.color = '#dcf8c5';
-            if (currentRoom) updateStatusUI();
+            showToast('🟢 Kembali online');
+            if (isJoined) updateStatusUI();
         });
-
         window.addEventListener('offline', () => {
-            console.log('🔴 Offline mode');
+            showToast('🔴 Offline — pesan tidak dapat dikirim', 4000);
+            connStatusSpan.textContent = '🔴 Offline';
             connStatusSpan.style.color = '#ffb3b3';
-            connStatusSpan.innerText = '⚫ Offline (local mode)';
         });
-
-        // Check initial online status
-        if (!navigator.onLine) {
-            connStatusSpan.style.color = '#ffb3b3';
-            connStatusSpan.innerText = '⚫ Offline';
-        }
+    });
     </script>
 </body>
 </html>
