@@ -384,6 +384,46 @@
         .chat-area::-webkit-scrollbar-thumb:hover {
             background: #999;
         }
+
+        /* DEBUG PANEL */
+        #debug-panel {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            max-height: 45vh;
+            background: rgba(0,0,0,0.92);
+            color: #00ff88;
+            font-family: monospace;
+            font-size: 11px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+        }
+        #debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: #111;
+            border-top: 2px solid #00ff88;
+            cursor: pointer;
+            user-select: none;
+        }
+        #debug-header span { color: #00ff88; font-weight: bold; font-size: 12px; }
+        #debug-header button {
+            background: #333; color: #fff; border: none;
+            border-radius: 4px; padding: 2px 8px; font-size: 11px;
+            cursor: pointer; margin-left: 8px;
+        }
+        #debug-log {
+            overflow-y: auto;
+            padding: 8px 12px;
+            flex: 1;
+        }
+        .dlog { padding: 2px 0; border-bottom: 1px solid #1a1a1a; word-break: break-all; }
+        .dlog.info  { color: #00ff88; }
+        .dlog.warn  { color: #ffcc00; }
+        .dlog.error { color: #ff4444; }
+        .dlog.step  { color: #00cfff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -440,7 +480,49 @@
         </div>
     </div>
 
+    <!-- DEBUG PANEL -->
+    <div id="debug-panel">
+        <div id="debug-header" onclick="toggleDebug()">
+            <span>🐛 DEBUG LOG</span>
+            <div>
+                <button onclick="event.stopPropagation(); document.getElementById('debug-log').innerHTML=''">Clear</button>
+                <button onclick="event.stopPropagation(); toggleDebug()">▲ Hide</button>
+            </div>
+        </div>
+        <div id="debug-log"></div>
+    </div>
+
     <script>
+        // =================== DEBUG HELPER ===================
+        let debugVisible = true;
+        function toggleDebug() {
+            const log = document.getElementById('debug-log');
+            const btn = document.querySelector('#debug-header button:last-child');
+            debugVisible = !debugVisible;
+            log.style.display = debugVisible ? 'block' : 'none';
+            btn.textContent = debugVisible ? '▲ Hide' : '▼ Show';
+        }
+        function dlog(msg, type='info') {
+            const log = document.getElementById('debug-log');
+            const d = document.createElement('div');
+            d.className = `dlog ${type}`;
+            const t = new Date().toLocaleTimeString();
+            d.textContent = `[${t}] ${msg}`;
+            log.appendChild(d);
+            log.scrollTop = log.scrollHeight;
+            console[type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log'](msg);
+        }
+
+        // Override console untuk tangkap semua error
+        const _origError = console.error.bind(console);
+        console.error = (...args) => { dlog('ERROR: ' + args.join(' '), 'error'); _origError(...args); };
+        const _origWarn = console.warn.bind(console);
+        console.warn = (...args) => { dlog('WARN: ' + args.join(' '), 'warn'); _origWarn(...args); };
+        window.onerror = (msg, src, line) => { dlog(`JS ERROR: ${msg} (line ${line})`, 'error'); };
+        window.onunhandledrejection = (e) => { dlog(`PROMISE REJECTED: ${e.reason}`, 'error'); };
+
+        dlog('🚀 Halaman dimuat', 'step');
+
         // =================== PWA SERVICE WORKER REGISTRATION ===================
         if ('serviceWorker' in navigator) {
             const swCode = `
@@ -598,17 +680,47 @@
         let db = null;
 
         // Initialize Firebase dengan error handling
+        dlog('🔥 Memulai inisialisasi Firebase...', 'step');
+        dlog(`📋 Project: ${firebaseConfig.projectId}`, 'info');
+        dlog(`🌐 DB URL: ${firebaseConfig.databaseURL}`, 'info');
         try {
+            dlog('Memanggil firebase.initializeApp...', 'info');
             firebase.initializeApp(firebaseConfig);
+            dlog('✅ initializeApp berhasil', 'info');
+            dlog('Memanggil firebase.database()...', 'info');
             db = firebase.database();
+            dlog('✅ Database instance dibuat', 'info');
+
+            // Test koneksi nyata ke Firebase
+            dlog('🔌 Mengetes koneksi ke Firebase RTDB...', 'step');
+            const connRef = db.ref('.info/connected');
+            connRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    dlog('✅ FIREBASE RTDB: TERHUBUNG!', 'info');
+                } else {
+                    dlog('⚠️ FIREBASE RTDB: Tidak terhubung / menunggu...', 'warn');
+                }
+            });
+
+            // Test baca rules
+            db.ref('rooms').limitToFirst(1).once('value')
+                .then(() => dlog('✅ Firebase READ: Berhasil (rules OK)', 'info'))
+                .catch(e => dlog(`❌ Firebase READ ERROR: ${e.code} - ${e.message}`, 'error'));
+
             connStatusSpan.innerText = '🟢 Connected';
             connStatusSpan.style.color = '#dcf8c5';
         } catch (error) {
+            dlog(`❌ Firebase init GAGAL: ${error.message}`, 'error');
             console.error('❌ Firebase initialization error:', error);
             connStatusSpan.innerText = '⚠️ Config error';
             connStatusSpan.style.color = '#ffb3b3';
             alert('⚠️ Firebase belum dikonfigurasi. Edit firebaseConfig di script.');
         }
+
+        // Cek library
+        dlog(`📦 nacl: ${typeof nacl !== 'undefined' ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof nacl !== 'undefined' ? 'info' : 'error');
+        dlog(`📦 nacl.util: ${typeof nacl !== 'undefined' && nacl.util ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof nacl !== 'undefined' && nacl.util ? 'info' : 'error');
+        dlog(`📦 firebase: ${typeof firebase !== 'undefined' ? '✅ loaded' : '❌ TIDAK ADA'}`, typeof firebase !== 'undefined' ? 'info' : 'error');
 
         // =================== ENCRYPTION FUNCTIONS ===================
         function generateKeyPair() {
@@ -767,14 +879,19 @@
         }
 
         async function joinRoom() {
+            dlog('🚪 joinRoom() dipanggil', 'step');
             if (!db) {
+                dlog('❌ db = null! Firebase tidak terinisialisasi', 'error');
                 alert("Firebase belum diinisialisasi. Cek konfigurasi.");
                 return;
             }
+            dlog('✅ db OK', 'info');
             let name = usernameInput.value.trim();
             let room = roomCodeInput.value.trim();
+            dlog(`👤 Nama: "${name}", 🏠 Room: "${room}"`, 'info');
             if (!name) name = "User_" + Math.floor(Math.random() * 1000);
             if (!room) {
+                dlog('❌ Room kosong!', 'error');
                 alert("Masukkan kode room atau generate terlebih dahulu");
                 return;
             }
@@ -794,12 +911,14 @@
             chatContainer.innerHTML = `<div class="empty-chat">🔒 Bergabung ke room "${escapeHtml(room)}"<br><span style="font-size:0.7rem;">Pesan terenkripsi end-to-end</span></div>`;
             
             try {
+                dlog(`📝 Menulis ke Firebase: rooms/${currentRoom}/users/${currentUser.id}`, 'info');
                 const userRef = db.ref(`rooms/${currentRoom}/users/${currentUser.id}`);
                 await userRef.set({
                     name: currentUser.name,
                     publicKey: keyPair.publicKey,
                     timestamp: Date.now()
                 });
+                dlog('✅ Data user berhasil ditulis ke Firebase!', 'info');
                 userRef.onDisconnect().remove();
                 
                 const usersRef = db.ref(`rooms/${currentRoom}/users`);
@@ -852,6 +971,7 @@
                 messageInput.disabled = false;
                 sendBtn.disabled = false;
             } catch (error) {
+                dlog(`❌ JOIN ERROR: ${error.code} - ${error.message}`, 'error');
                 console.error("Join room error:", error);
                 alert("Gagal bergabung ke room. Cek konfigurasi Firebase.");
             }
@@ -860,6 +980,7 @@
         joinBtn.addEventListener('click', joinRoom);
         genRoomBtn.addEventListener('click', generateRoomCode);
         sendBtn.addEventListener('click', sendMessage);
+        dlog('✅ Event listeners terpasang (joinBtn, genRoomBtn, sendBtn)', 'info');
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !sendBtn.disabled) {
                 e.preventDefault();
