@@ -464,44 +464,16 @@
         const icon192 = generateIconDataURL(192, '#075e54', '💬');
         const icon512 = generateIconDataURL(512, '#075e54', '💬');
         
-        // Assign ke link icon
+        // Assign ke link icon (data URL dari canvas, valid untuk browser)
         document.getElementById('icon-192').href = icon192;
         document.getElementById('icon-512').href = icon512;
-        document.getElementById('apple-icon').href = icon192; // apple touch icon
-        
-        // 2. Manifest.json (dibuat sebagai Blob dan di-refer)
-        const manifestObj = {
-            name: "SecureChat E2EE",
-            short_name: "SecureChat",
-            description: "Chat terenkripsi end-to-end dengan Web Crypto",
-            start_url: "./",
-            display: "standalone",
-            background_color: "#0a0a0a",
-            theme_color: "#075e54",
-            orientation: "portrait-primary",
-            icons: [
-                { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-                { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
-            ],
-            categories: ["social", "utilities"],
-            lang: "id"
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: "application/manifest+json" });
-        const manifestURL = URL.createObjectURL(manifestBlob);
-        document.getElementById('manifest-link').href = manifestURL;
-        
-        // 3. Service Worker (stable, dengan caching strategi network-first + cache)
-        //    Kita buat SW dari string, lalu daftarkan. Agar persisten, kita gunakan URL unik namun setelah registrasi
-        //    browser akan menyimpan SW script meskipun blob URL hilang? Tidak, tapi kita bisa menggunakan trick:
-        //    Daftarkan service worker dari blob URL, kemudian setelah terdaftar, browser menyimpan script bytecode
-        //    namun saat refresh, karena blob URL baru, service worker akan diganti. Agar tidak terjadi duplikasi,
-        //    kita hapus registrasi sebelumnya jika ada dan daftarkan ulang. Untuk PWA installable, service worker 
-        //    yang aktif harus ada. Pendekatan: buat SW dengan konten yang sama setiap kali, dan daftarkan.
-        //    Ini akan berfungsi untuk instalasi PWA selama session pertama (user dapat menginstall).
-        //    Untuk memastikan berfungsi setelah restart browser, lebih baik menggunakan file sw.js eksternal,
-        //    namun karena batasan satu file, metode ini tetap memberikan PWA yang dapat diinstall.
-        
-        // Registrasi Service Worker dari file eksternal sw.js (same-origin, selalu valid)
+        document.getElementById('apple-icon').href = icon192;
+
+        // 2. Manifest: gunakan file manifest.json statis (bukan blob URL).
+        //    Blob URL menyebabkan browser mengabaikan start_url karena tidak punya origin yang valid.
+        //    manifest.json sudah di-link di <head> secara statis — tidak perlu diubah di sini.
+
+        // 3. Registrasi Service Worker dari file eksternal sw.js (same-origin, selalu valid)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js', { scope: './' })
                 .then(reg => console.log('[PWA] Service Worker registered, scope:', reg.scope))
