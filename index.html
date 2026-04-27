@@ -1067,10 +1067,6 @@
                 </div>
 
                 <button class="profile-save-btn" id="profile-save-btn">Simpan Perubahan</button>
-                <button class="profile-danger-btn" id="logout-btn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Keluar / Log Out
-                </button>
             </div>
         </div>
 
@@ -1394,44 +1390,12 @@
         document.getElementById('setup-btn').disabled = true;
         try {
             const snap = await db.ref(`usernames/${username}`).get();
-
             if (snap.exists()) {
-                // Username sudah terdaftar — coba login ulang sebagai pemiliknya
-                const existingUID = snap.val();
-                const userSnap = await db.ref(`users/${existingUID}`).get();
-                if (!userSnap.exists()) {
-                    errEl.textContent = '❌ Akun tidak ditemukan, coba username lain';
-                    errEl.classList.add('show');
-                    return;
-                }
-                const userData = userSnap.val();
-                // Validasi nama tampilan cocok
-                if (userData.displayName.trim().toLowerCase() !== displayName.trim().toLowerCase()) {
-                    errEl.textContent = '❌ Nama tampilan tidak cocok dengan username ini';
-                    errEl.classList.add('show');
-                    return;
-                }
-                // Login berhasil — pulihkan sesi
-                const kp = await generateKeyPair();
-                myPrivateKey   = kp.privateKey;
-                myPublicKeyB64 = kp.publicKeyB64;
-                await db.ref(`users/${existingUID}`).update({
-                    publicKey: myPublicKeyB64,
-                    lastSeen:  Date.now()
-                });
-                localStorage.setItem('sc_uid', existingUID);
-                localStorage.setItem('sc_username', userData.username);
-                localStorage.setItem('sc_displayname', userData.displayName);
-                myUID         = existingUID;
-                myUsername    = userData.username;
-                myDisplayName = userData.displayName;
-                showToast('\u2705 Selamat datang kembali, ' + userData.displayName + '!');
-                showScreen('home');
-                listenRecentChats();
+                errEl.textContent = '❌ Username sudah dipakai, coba yang lain';
+                errEl.classList.add('show');
                 return;
             }
 
-            // Akun baru
             const uid = crypto.randomUUID();
             const kp  = await generateKeyPair();
             myPrivateKey   = kp.privateKey;
@@ -1816,31 +1780,6 @@
         }
     });
 
-
-    // ============================================================
-    //  LOGOUT
-    // ============================================================
-    document.getElementById("logout-btn").addEventListener("click", () => {
-        const confirmed = confirm("Yakin ingin keluar? Kunci enkripsi sesi ini akan hilang.");
-        if (!confirmed) return;
-        if (recentChatsListener) {
-            db.ref("userChats/" + myUID).off("value", recentChatsListener);
-            recentChatsListener = null;
-        }
-        if (chatMsgListener && activeChatId) {
-            db.ref("chats/" + activeChatId + "/messages").off("child_added", chatMsgListener);
-            chatMsgListener = null;
-        }
-        localStorage.removeItem("sc_uid");
-        localStorage.removeItem("sc_username");
-        localStorage.removeItem("sc_displayname");
-        myUID = null; myUsername = null; myDisplayName = null;
-        myPrivateKey = null; myPublicKeyB64 = null;
-        activeChatId = null; activePeerUID = null; activePeerPubKey = null;
-        recentChats = {};
-        showToast("✅ Berhasil keluar");
-        setTimeout(() => showScreen("setup"), 600);
-    });
     // ============================================================
     //  BOOTSTRAP
     // ============================================================
