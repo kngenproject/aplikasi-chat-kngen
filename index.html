@@ -1252,15 +1252,15 @@
         const emptyEl = document.getElementById('chat-list-empty');
         const entries = Object.entries(recentChats).sort((a, b) => (b[1].lastTs || 0) - (a[1].lastTs || 0));
 
+        // Remove all chat items (but NOT emptyEl)
+        listEl.querySelectorAll('.chat-item').forEach(el => el.remove());
+
         if (entries.length === 0) {
-            listEl.innerHTML = '';
-            listEl.appendChild(emptyEl);
-            emptyEl.style.display = 'flex';
+            if (emptyEl) emptyEl.style.display = 'flex';
             return;
         }
 
-        emptyEl.style.display = 'none';
-        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'none';
         for (const [chatId, info] of entries) {
             const item = document.createElement('div');
             item.className = 'chat-item';
