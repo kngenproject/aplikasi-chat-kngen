@@ -925,6 +925,54 @@
         }
         .profile-err-wrap .error-msg.show { display: block; }
 
+        /* ===== SETUP TABS ===== */
+        .setup-tabs {
+            display: flex;
+            background: var(--bg3);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            margin-bottom: 22px;
+            gap: 3px;
+        }
+        .setup-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text2);
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+            font-family: inherit;
+            letter-spacing: 0.2px;
+        }
+        .setup-tab.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .setup-tab:not(.active):hover {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        /* ===== LOGIN INFO BOX ===== */
+        .login-info-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: rgba(0,229,160,0.06);
+            border: 1px solid rgba(0,229,160,0.2);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            color: var(--text2);
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+        .login-info-box svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+
         @media (max-width: 600px) {
             .app { max-width: 100%; }
         }
@@ -957,20 +1005,42 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Nama Tampilan</label>
-                    <input type="text" id="setup-displayname" placeholder="Nama Anda (misal: Budi)" maxlength="40" autocomplete="off">
-                    <div class="hint">Nama yang terlihat oleh pengguna lain</div>
+                <!-- TAB SWITCHER -->
+                <div class="setup-tabs">
+                    <button class="setup-tab active" id="tab-register" onclick="switchSetupTab('register')">Daftar Baru</button>
+                    <button class="setup-tab" id="tab-login" onclick="switchSetupTab('login')">Sudah Punya Akun</button>
                 </div>
 
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="setup-username" placeholder="username_unik" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
-                    <div class="hint">Huruf kecil, angka, underscore (3–30 karakter)</div>
-                    <div class="error-msg" id="setup-username-error"></div>
+                <!-- PANEL: REGISTER -->
+                <div id="panel-register">
+                    <div class="form-group">
+                        <label>Nama Tampilan</label>
+                        <input type="text" id="setup-displayname" placeholder="Nama Anda (misal: Budi)" maxlength="40" autocomplete="off">
+                        <div class="hint">Nama yang terlihat oleh pengguna lain</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="setup-username" placeholder="username_unik" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
+                        <div class="hint">Huruf kecil, angka, underscore (3–30 karakter)</div>
+                        <div class="error-msg" id="setup-username-error"></div>
+                    </div>
+                    <button class="btn-primary" id="setup-btn">Mulai SecureChat</button>
                 </div>
 
-                <button class="btn-primary" id="setup-btn">Mulai SecureChat</button>
+                <!-- PANEL: LOGIN -->
+                <div id="panel-login" style="display:none">
+                    <div class="login-info-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        <span>Masuk ke akun yang sudah dibuat sebelumnya di perangkat lain atau browser berbeda.</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Username Lama</label>
+                        <input type="text" id="login-username" placeholder="username_anda" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
+                        <div class="hint">Ketik username yang sudah pernah didaftarkan</div>
+                        <div class="error-msg" id="login-error"></div>
+                    </div>
+                    <button class="btn-primary" id="login-btn">Masuk ke Akun</button>
+                </div>
             </div>
         </div>
 
@@ -1431,6 +1501,83 @@
         document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') document.getElementById('setup-btn').click();
         });
+    });
+
+    document.getElementById('login-username').addEventListener('keypress', e => {
+        if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+
+    // ============================================================
+    //  SETUP TAB SWITCHER
+    // ============================================================
+    function switchSetupTab(tab) {
+        const isRegister = tab === 'register';
+        document.getElementById('panel-register').style.display = isRegister ? '' : 'none';
+        document.getElementById('panel-login').style.display    = isRegister ? 'none' : '';
+        document.getElementById('tab-register').classList.toggle('active', isRegister);
+        document.getElementById('tab-login').classList.toggle('active', !isRegister);
+        // clear errors
+        document.getElementById('setup-username-error').classList.remove('show');
+        document.getElementById('login-error').classList.remove('show');
+    }
+
+    // ============================================================
+    //  LOGIN WITH EXISTING USERNAME
+    // ============================================================
+    document.getElementById('login-btn').addEventListener('click', async () => {
+        const username = document.getElementById('login-username').value.trim().toLowerCase();
+        const errEl    = document.getElementById('login-error');
+        errEl.classList.remove('show');
+        errEl.textContent = '';
+
+        if (!validateUsername(username)) {
+            errEl.textContent = 'Username tidak valid (3–30 karakter, huruf kecil, angka, underscore)';
+            errEl.classList.add('show');
+            return;
+        }
+
+        setLoading(true);
+        document.getElementById('login-btn').disabled = true;
+        try {
+            // 1. Lookup UID from username index
+            const usernameSnap = await db.ref(`usernames/${username}`).get();
+            if (!usernameSnap.exists()) {
+                errEl.textContent = '❌ Username tidak ditemukan. Pastikan sudah pernah mendaftar.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            const uid = usernameSnap.val();
+
+            // 2. Load user profile from Firebase
+            const userSnap = await db.ref(`users/${uid}`).get();
+            if (!userSnap.exists()) {
+                errEl.textContent = '❌ Data akun tidak ditemukan di server.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            const userData = userSnap.val();
+
+            // 3. Restore session to localStorage
+            localStorage.setItem('sc_uid',         uid);
+            localStorage.setItem('sc_username',    username);
+            localStorage.setItem('sc_displayname', userData.displayName || username);
+
+            myUID         = uid;
+            myUsername    = username;
+            myDisplayName = userData.displayName || username;
+
+            // 4. Init session (generates new key pair, updates publicKey in Firebase)
+            await initSession();
+            showToast('✅ Berhasil masuk sebagai @' + username);
+        } catch (err) {
+            errEl.textContent = '❌ Gagal login: ' + err.message;
+            errEl.classList.add('show');
+        } finally {
+            setLoading(false);
+            document.getElementById('login-btn').disabled = false;
+        }
     });
 
     // ============================================================
