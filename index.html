@@ -1015,6 +1015,31 @@
         .btn-logout:hover { background: rgba(248,81,73,0.08); border-color: var(--danger); }
         .btn-logout:active { background: rgba(248,81,73,0.14); }
 
+        /* ===== PASSWORD INPUT ===== */
+        .pw-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .pw-wrap input {
+            width: 100%;
+            padding-right: 44px;
+        }
+        .pw-toggle {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: var(--text3);
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        .pw-toggle:hover { color: var(--text2); }
+        .pw-toggle svg { width: 17px; height: 17px; }
+
         @media (max-width: 600px) {
             .app { max-width: 100%; }
         }
@@ -1066,6 +1091,18 @@
                         <div class="hint">Huruf kecil, angka, underscore (3–30 karakter)</div>
                         <div class="error-msg" id="setup-username-error"></div>
                     </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="pw-wrap">
+                            <input type="password" id="setup-password" placeholder="Minimal 6 karakter" maxlength="128" autocomplete="new-password">
+                            <button type="button" class="pw-toggle" onclick="togglePw('setup-password', this)" tabindex="-1">
+                                <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <svg class="eye-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
+                        </div>
+                        <div class="hint">Password untuk melindungi akun Anda</div>
+                        <div class="error-msg" id="setup-password-error"></div>
+                    </div>
                     <button class="btn-primary" id="setup-btn">Mulai SecureChat</button>
                 </div>
 
@@ -1076,9 +1113,18 @@
                         <span>Masuk ke akun yang sudah dibuat sebelumnya di perangkat lain atau browser berbeda.</span>
                     </div>
                     <div class="form-group">
-                        <label>Username Lama</label>
+                        <label>Username</label>
                         <input type="text" id="login-username" placeholder="username_anda" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
-                        <div class="hint">Ketik username yang sudah pernah didaftarkan</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="pw-wrap">
+                            <input type="password" id="login-password" placeholder="Password Anda" maxlength="128" autocomplete="current-password">
+                            <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)" tabindex="-1">
+                                <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <svg class="eye-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
+                        </div>
                         <div class="error-msg" id="login-error"></div>
                     </div>
                     <button class="btn-primary" id="login-btn">Masuk ke Akun</button>
@@ -1426,6 +1472,22 @@
         } catch (e) { return null; }
     }
 
+    // Hash password with SHA-256, return hex string
+    async function hashPassword(password) {
+        const encoded = new TextEncoder().encode(password);
+        const hashBuf = await crypto.subtle.digest('SHA-256', encoded);
+        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Toggle show/hide password
+    function togglePw(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('.eye-show').style.display = isHidden ? 'none' : '';
+        btn.querySelector('.eye-hide').style.display = isHidden ? '' : 'none';
+    }
+
     // ============================================================
     //  FIREBASE INIT
     // ============================================================
@@ -1491,15 +1553,22 @@
     document.getElementById('setup-btn').addEventListener('click', async () => {
         const displayName = document.getElementById('setup-displayname').value.trim();
         const username    = document.getElementById('setup-username').value.trim().toLowerCase();
+        const password    = document.getElementById('setup-password').value;
         const errEl       = document.getElementById('setup-username-error');
+        const pwErrEl     = document.getElementById('setup-password-error');
 
-        errEl.classList.remove('show');
-        errEl.textContent = '';
+        errEl.classList.remove('show');  errEl.textContent = '';
+        pwErrEl.classList.remove('show'); pwErrEl.textContent = '';
 
         if (!displayName) { showToast('Masukkan nama tampilan'); return; }
         if (!validateUsername(username)) {
             errEl.textContent = 'Username: 3–30 karakter, huruf kecil, angka, underscore saja';
             errEl.classList.add('show');
+            return;
+        }
+        if (password.length < 6) {
+            pwErrEl.textContent = '❌ Password minimal 6 karakter';
+            pwErrEl.classList.add('show');
             return;
         }
 
@@ -1518,11 +1587,14 @@
             myPrivateKey   = kp.privateKey;
             myPublicKeyB64 = kp.publicKeyB64;
 
+            const pwHash = await hashPassword(password);
+
             await db.ref(`usernames/${username}`).set(uid);
             await db.ref(`users/${uid}`).set({
                 username:    username,
                 displayName: displayName,
                 publicKey:   myPublicKeyB64,
+                passwordHash: pwHash,
                 createdAt:   Date.now(),
                 lastSeen:    Date.now()
             });
@@ -1544,14 +1616,16 @@
         }
     });
 
-    ['setup-displayname', 'setup-username'].forEach(id => {
+    ['setup-displayname', 'setup-username', 'setup-password'].forEach(id => {
         document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') document.getElementById('setup-btn').click();
         });
     });
 
-    document.getElementById('login-username').addEventListener('keypress', e => {
-        if (e.key === 'Enter') document.getElementById('login-btn').click();
+    ['login-username', 'login-password'].forEach(id => {
+        document.getElementById(id).addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('login-btn').click();
+        });
     });
 
     // ============================================================
@@ -1573,12 +1647,18 @@
     // ============================================================
     document.getElementById('login-btn').addEventListener('click', async () => {
         const username = document.getElementById('login-username').value.trim().toLowerCase();
+        const password = document.getElementById('login-password').value;
         const errEl    = document.getElementById('login-error');
         errEl.classList.remove('show');
         errEl.textContent = '';
 
         if (!validateUsername(username)) {
-            errEl.textContent = 'Username tidak valid (3–30 karakter, huruf kecil, angka, underscore)';
+            errEl.textContent = 'Username tidak valid';
+            errEl.classList.add('show');
+            return;
+        }
+        if (!password) {
+            errEl.textContent = '❌ Masukkan password';
             errEl.classList.add('show');
             return;
         }
@@ -1586,36 +1666,40 @@
         setLoading(true);
         document.getElementById('login-btn').disabled = true;
         try {
-            // 1. Lookup UID from username index
+            // 1. Lookup UID
             const usernameSnap = await db.ref(`usernames/${username}`).get();
             if (!usernameSnap.exists()) {
-                errEl.textContent = '❌ Username tidak ditemukan. Pastikan sudah pernah mendaftar.';
+                errEl.textContent = '❌ Username tidak ditemukan';
                 errEl.classList.add('show');
                 return;
             }
-
             const uid = usernameSnap.val();
 
-            // 2. Load user profile from Firebase
+            // 2. Load user data
             const userSnap = await db.ref(`users/${uid}`).get();
             if (!userSnap.exists()) {
-                errEl.textContent = '❌ Data akun tidak ditemukan di server.';
+                errEl.textContent = '❌ Data akun tidak ditemukan';
+                errEl.classList.add('show');
+                return;
+            }
+            const userData = userSnap.val();
+
+            // 3. Verify password
+            const pwHash = await hashPassword(password);
+            if (userData.passwordHash && userData.passwordHash !== pwHash) {
+                errEl.textContent = '❌ Password salah';
                 errEl.classList.add('show');
                 return;
             }
 
-            const userData = userSnap.val();
-
-            // 3. Restore session to localStorage
+            // 4. Restore session
             localStorage.setItem('sc_uid',         uid);
             localStorage.setItem('sc_username',    username);
             localStorage.setItem('sc_displayname', userData.displayName || username);
-
             myUID         = uid;
             myUsername    = username;
             myDisplayName = userData.displayName || username;
 
-            // 4. Init session (generates new key pair, updates publicKey in Firebase)
             await initSession();
             showToast('✅ Berhasil masuk sebagai @' + username);
         } catch (err) {
