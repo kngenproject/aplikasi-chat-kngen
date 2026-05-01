@@ -1345,8 +1345,10 @@
         return d.innerHTML;
     }
     function autoResize(el) {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+        requestAnimationFrame(() => {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+        });
     }
     function validateUsername(u) {
         return /^[a-z0-9_]{3,30}$/.test(u);
@@ -1380,14 +1382,8 @@
         if (name === 'profile') renderProfile();
         if (name === 'search') {
             document.getElementById('search-input').value = '';
-            document.getElementById('search-results').innerHTML = `
-                <div class="search-hint">
-                    <div class="hint-glyph">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </div>
-                    <p>Ketik username untuk mencari pengguna SecureChat</p>
-                </div>`;
-            setTimeout(() => document.getElementById('search-input').focus(), 100);
+            setSearchHint('Ketik username untuk mencari pengguna SecureChat');
+            setTimeout(() => document.getElementById('search-input').focus(), 300);
         }
     }
 
@@ -1768,25 +1764,40 @@
         clearTimeout(searchDebounce);
         const q = e.target.value.trim().toLowerCase();
         if (!q) {
-            document.getElementById('search-results').innerHTML = `
-                <div class="search-hint">
-                    <div class="hint-glyph">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </div>
-                    <p>Ketik username untuk mencari pengguna SecureChat</p>
-                </div>`;
+            setSearchHint('Ketik username untuk mencari pengguna SecureChat');
             return;
         }
-        searchDebounce = setTimeout(() => searchUser(q), 350);
+        setSearchStatus('Mencari...');
+        searchDebounce = setTimeout(() => searchUser(q), 400);
     });
+
+    function setSearchHint(msg) {
+        document.getElementById('search-results').innerHTML = `
+            <div class="search-hint">
+                <div class="hint-glyph">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <p>${msg}</p>
+            </div>`;
+    }
+
+    function setSearchStatus(msg) {
+        // Update status text without touching the input or causing layout shift
+        let statusEl = document.getElementById('search-status-msg');
+        if (!statusEl) {
+            const resEl = document.getElementById('search-results');
+            resEl.innerHTML = `<div class="search-hint"><div class="hint-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><p id="search-status-msg"></p></div>`;
+            statusEl = document.getElementById('search-status-msg');
+        }
+        statusEl.textContent = msg;
+    }
 
     async function searchUser(query) {
         const resEl = document.getElementById('search-results');
-        resEl.innerHTML = `<div class="search-hint">
-            <div class="hint-glyph">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-            <p>Mencari...</p></div>`;
+        // Guard: if input value changed before debounce fired, skip
+        const currentVal = document.getElementById('search-input').value.trim().toLowerCase();
+        if (currentVal !== query) return;
+
         try {
             const snap = await db.ref(`usernames/${query}`).get();
             if (!snap.exists()) {
@@ -1794,7 +1805,7 @@
                     <div class="hint-glyph">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </div>
-                    <p>Pengguna "<strong>${escapeHtml(query)}</strong>" tidak ditemukan.<br>Pastikan username sudah benar.</p></div>`;
+                    <p>Pengguna "<strong>${escapeHtml(query)}</strong>" tidak ditemukan.</p></div>`;
                 return;
             }
             const peerUID = snap.val();
