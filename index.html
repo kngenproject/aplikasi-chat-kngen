@@ -973,6 +973,48 @@
         }
         .login-info-box svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
 
+        /* ===== LOGOUT BUTTON ===== */
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: calc(100% - 32px);
+            margin: 12px 16px 24px;
+            background: transparent;
+            border: 1.5px solid rgba(248,81,73,0.35);
+            border-radius: var(--radius-sm);
+            padding: 13px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--danger);
+            cursor: pointer;
+            transition: background 0.18s, border-color 0.18s;
+            font-family: inherit;
+        }
+        .btn-logout:hover { background: rgba(248,81,73,0.08); border-color: var(--danger); }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: calc(100% - 32px);
+            margin: 10px 16px 24px;
+            background: transparent;
+            border: 1.5px solid rgba(248,81,73,0.35);
+            border-radius: var(--radius-sm);
+            padding: 13px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--danger);
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.18s, border-color 0.18s;
+        }
+        .btn-logout:hover { background: rgba(248,81,73,0.08); border-color: var(--danger); }
+        .btn-logout:active { background: rgba(248,81,73,0.14); }
+
         @media (max-width: 600px) {
             .app { max-width: 100%; }
         }
@@ -1137,6 +1179,11 @@
                 </div>
 
                 <button class="profile-save-btn" id="profile-save-btn">Simpan Perubahan</button>
+
+                <button class="btn-logout" id="logout-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Keluar dari Akun
+                </button>
             </div>
         </div>
 
@@ -1851,6 +1898,30 @@
         document.getElementById('profile-username-input').value = myUsername || '';
     }
 
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        const confirmed = confirm('Yakin ingin keluar?\n\nAnda bisa masuk lagi dengan tab "Sudah Punya Akun" menggunakan username yang sama.');
+        if (!confirmed) return;
+
+        // Stop all listeners
+        if (recentChatsListener) db.ref(`userChats/${myUID}`).off('value', recentChatsListener);
+        if (chatMsgListener && activeChatId) db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
+
+        // Clear localStorage
+        localStorage.removeItem('sc_uid');
+        localStorage.removeItem('sc_username');
+        localStorage.removeItem('sc_displayname');
+
+        // Reset state
+        myUID = myUsername = myDisplayName = myPrivateKey = myPublicKeyB64 = null;
+        activeChatId = activePeerUID = activePeerPubKey = activePeerName = chatMsgListener = null;
+        recentChats = {};
+
+        // Back to setup
+        switchSetupTab('login');
+        showScreen('setup');
+        showToast('👋 Berhasil keluar');
+    });
+
     document.getElementById('profile-save-btn').addEventListener('click', async () => {
         const newDisplay  = document.getElementById('profile-displayname-input').value.trim();
         const newUsername = document.getElementById('profile-username-input').value.trim().toLowerCase();
@@ -1907,6 +1978,40 @@
     // ============================================================
     document.getElementById('btn-go-search').addEventListener('click', () => showScreen('search'));
     document.getElementById('btn-go-profile').addEventListener('click', () => showScreen('profile'));
+
+    // ============================================================
+    //  LOGOUT
+    // ============================================================
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        if (!confirm('Keluar dari akun? Anda bisa masuk lagi dengan username yang sama.')) return;
+
+        // Stop all listeners
+        if (recentChatsListener) {
+            db.ref(`userChats/${myUID}`).off('value', recentChatsListener);
+            recentChatsListener = null;
+        }
+        if (chatMsgListener && activeChatId) {
+            db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
+            chatMsgListener = null;
+        }
+
+        // Clear local session
+        localStorage.removeItem('sc_uid');
+        localStorage.removeItem('sc_username');
+        localStorage.removeItem('sc_displayname');
+
+        // Reset state
+        myUID = null; myUsername = null; myDisplayName = null;
+        myPrivateKey = null; myPublicKeyB64 = null;
+        activeChatId = null; activePeerUID = null;
+        activePeerPubKey = null; activePeerName = null;
+        recentChats = {};
+
+        // Back to setup screen, show login tab
+        switchSetupTab('login');
+        showScreen('setup');
+        showToast('✅ Berhasil keluar dari akun');
+    });
     document.getElementById('chat-back-btn').addEventListener('click', () => {
         if (chatMsgListener && activeChatId) {
             db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
