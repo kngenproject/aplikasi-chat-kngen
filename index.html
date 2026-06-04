@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="SecureChat">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json" id="manifest-link">
-    <link rel="icon" type="image/png" sizes="192x192" id="icon-192">
-    <link rel="icon" type="image/png" sizes="512x512" id="icon-512">
-    <link rel="apple-touch-icon" id="apple-icon">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" id="icon-192">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" id="icon-512">
+    <link rel="apple-touch-icon" href="icon-192.png" id="apple-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -1272,25 +1272,31 @@
     //  PWA ICON + MANIFEST + SERVICE WORKER
     // ============================================================
     (function() {
-        function generateIconDataURL(size, bg, emoji) {
+        // Icon PNG files are served from root; generate canvas fallback only if they fail to load
+        function generateIconDataURL(size) {
             const canvas = document.createElement('canvas');
             canvas.width = canvas.height = size;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = bg;
+            ctx.fillStyle = '#0d1117';
             ctx.beginPath();
             ctx.roundRect(0, 0, size, size, size * 0.2);
             ctx.fill();
             ctx.font = `${size * 0.55}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('💬', size / 2, size / 2);
+            ctx.fillText('\uD83D\uDCAC', size / 2, size / 2);
             return canvas.toDataURL('image/png');
         }
-        const icon192 = generateIconDataURL(192, '#0d1117', '💬');
-        const icon512 = generateIconDataURL(512, '#0d1117', '💬');
-        document.getElementById('icon-192').href = icon192;
-        document.getElementById('icon-512').href = icon512;
-        document.getElementById('apple-icon').href = icon192;
+        // Fallback: jika PNG gagal load, ganti dengan canvas-generated icon
+        const _iconTest = new Image();
+        _iconTest.onerror = () => {
+            const fb192 = generateIconDataURL(192);
+            const fb512 = generateIconDataURL(512);
+            document.getElementById('icon-192').href = fb192;
+            document.getElementById('icon-512').href = fb512;
+            document.getElementById('apple-icon').href = fb192;
+        };
+        _iconTest.src = 'icon-192.png';
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js', { scope: './' })
@@ -1992,30 +1998,6 @@
         document.getElementById('profile-displayname-input').value = myDisplayName || '';
         document.getElementById('profile-username-input').value = myUsername || '';
     }
-
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        const confirmed = confirm('Yakin ingin keluar?\n\nAnda bisa masuk lagi dengan tab "Sudah Punya Akun" menggunakan username yang sama.');
-        if (!confirmed) return;
-
-        // Stop all listeners
-        if (recentChatsListener) db.ref(`userChats/${myUID}`).off('value', recentChatsListener);
-        if (chatMsgListener && activeChatId) db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
-
-        // Clear localStorage
-        localStorage.removeItem('sc_uid');
-        localStorage.removeItem('sc_username');
-        localStorage.removeItem('sc_displayname');
-
-        // Reset state
-        myUID = myUsername = myDisplayName = myPrivateKey = myPublicKeyB64 = null;
-        activeChatId = activePeerUID = activePeerPubKey = activePeerName = chatMsgListener = null;
-        recentChats = {};
-
-        // Back to setup
-        switchSetupTab('login');
-        showScreen('setup');
-        showToast('👋 Berhasil keluar');
-    });
 
     document.getElementById('profile-save-btn').addEventListener('click', async () => {
         const newDisplay  = document.getElementById('profile-displayname-input').value.trim();
