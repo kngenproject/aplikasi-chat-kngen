@@ -1,5 +1,5 @@
-// Service Worker untuk SecureChat PWA
-const CACHE_NAME = 'securechat-v4';
+// Service Worker untuk SecureChat PWA (Diperbarui)
+const CACHE_NAME = 'securechat-v5'; // Versi dinaikkan untuk membersihkan cache lama
 const urlsToCache = [
     './',
     './index.html',
@@ -7,28 +7,29 @@ const urlsToCache = [
     './icon-192.png',
     './icon-512.png',
     'https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js',
-    'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap'
+    'https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js'
 ];
 
+// 1. Tahap Install: Simpan aset utama ke cache
 self.addEventListener('install', event => {
-    console.log('[SW] Install event');
+    console.log('[SW] Install Event: Mencache aset inti');
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return cache.addAll(urlsToCache).catch(err => {
-                console.warn('[SW] Cache addAll error:', err);
+                console.warn('[SW] Gagal mencache beberapa aset saat instalasi:', err);
             });
         }).then(() => self.skipWaiting())
     );
 });
 
+// 2. Tahap Activate: Bersihkan cache versi lama secara otomatis
 self.addEventListener('activate', event => {
-    console.log('[SW] Activate event');
+    console.log('[SW] Activate Event: Membersihkan cache usang');
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(
                 keys.filter(key => key !== CACHE_NAME).map(key => {
-                    console.log('[SW] Deleting old cache:', key);
+                    console.log('[SW] Menghapus cache lama:', key);
                     return caches.delete(key);
                 })
             );
@@ -36,59 +37,64 @@ self.addEventListener('activate', event => {
     );
 });
 
+// 3. Tahap Fetch: Strategi Stale-While-Revalidate untuk performa kilat & selalu terperbarui
 self.addEventListener('fetch', event => {
-    const url = event.request.url;
-
-    // Jangan cache Firebase DB atau API eksternal yang dinamis
-    if (
-        url.includes('firebasedatabase.app') ||
-        url.includes('googleapis.com/google.firebase') ||
-        url.includes('firebaseio.com') ||
-        url.includes('firebaseapp.com/__/firebase')
-    ) {
+    // Abaikan permintaan yang bukan HTTP/HTTPS (seperti ekstensi browser atau Firebase WebSocket)
+    if (!event.request.url.startsWith(self.location.origin) && !event.request.url.startsWith('https://')) {
         return;
     }
 
-    // Untuk navigasi (HTML), coba network dulu, fallback ke cache
-    if (event.request.mode === 'navigate') {
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match('./index.html').then(
-                    fallback => fallback || new Response('Offline - SecureChat perlu koneksi internet', { status: 503 })
-                );
-            })
-        );
-    } else {
-        event.respondWith(
-            caches.match(event.request).then(cached => {
-                if (cached) return cached;
-                return fetch(event.request).then(networkResp => {
-                    if (networkResp && networkResp.status === 200 && networkResp.type === 'basic') {
-                        const clone = networkResp.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    }
-                    return networkResp;
-                }).catch(() => {
-                    if (event.request.destination === 'image') {
-                        return new Response('', { status: 404 });
-                    }
-                    return new Response('Resource tidak tersedia offline', { status: 404 });
-                });
-            })
-        );
-    }
+    // Strategi khusus untuk dokumen HTML utama atau aset lokal
+    event.respondWith(
+        caches.match(event.request).then(cachedResponse => {
+            // Jalankan pengambilan data dari jaringan di latar belakang
+            const fetchPromise = fetch(event.request).then(networkResponse => {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return networkResponse;
+            }).catch(() => {
+                // Tangani kegagalan jaringan secara diam-diam jika data sudah ada di cache
+            });
+
+            // Kembalikan respons dari cache dengan segera (jika ada), atau tunggu dari jaringan
+            return cachedResponse || fetchPromise;
+        }).catch(() => {
+            // Fallback jika benar-benar offline dan item tidak ada di cache
+            if (event.request.mode === 'navigate') {
+                return caches.match('./index.html');
+            }
+            return new Response('Resource tidak tersedia secara offline', { status: 503 });
+        })
+    );
 });
 
+// 4. Listeners Push Notification (Opsional)
 self.addEventListener('push', event => {
     if (event.data) {
-        const data = event.data.json();
-        event.waitUntil(
-            self.registration.showNotification(data.title || 'SecureChat', {
-                body: data.body || 'Pesan baru',
-                icon: './icon-192.png',
-                badge: './icon-192.png',
-                tag: 'securechat'
-            })
-        );
+        try {
+            const data = event.data.json();
+            event.waitUntil(
+                self.registration.showNotification(data.title || 'SecureChat', {
+                    body: data.body || 'Pesan terenkripsi baru masuk',
+                    icon: './icon-192.png',
+                    badge: './icon-192.png',
+                    tag: 'securechat',
+                    renotify: true
+                })
+            );
+        } catch (e) {
+            event.waitUntil(
+                self.registration.showNotification('SecureChat', {
+                    body: 'Ada pesan baru masuk',
+                    icon: './icon-192.png',
+                    badge: './icon-192.png',
+                    tag: 'securechat'
+                })
+            );
+        }
     }
 });

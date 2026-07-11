@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <meta name="description" content="SecureChat — Pesan terenkripsi E2EE berbasis UID, tanpa SMS">
     <meta name="theme-color" content="#0d1117">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content=\"yes\">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SecureChat">
     <meta name="mobile-web-app-capable" content="yes">
@@ -16,2079 +16,774 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <title>SecureChat • E2EE</title>
+
+    <title>SecureChat — E2EE Chat App</title>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
     <style>
         :root {
-            --bg:        #0d1117;
-            --bg2:       #161b22;
-            --bg3:       #1c2333;
-            --surface:   #21262d;
-            --border:    rgba(255,255,255,0.08);
-            --accent:    #00e5a0;
-            --accent2:   #00b37e;
-            --accent3:   #00ffc3;
-            --text:      #e6edf3;
-            --text2:     #8b949e;
-            --text3:     #484f58;
-            --danger:    #f85149;
-            --own-msg:   #0d2e1f;
-            --own-msg-b: #00e5a0;
-            --peer-msg:  #1c2333;
-            --radius-sm: 10px;
-            --radius-md: 16px;
-            --radius-lg: 24px;
-            --shadow:    0 8px 32px rgba(0,0,0,0.5);
+            --bg-main: #0d1117;
+            --bg-surface: #161b22;
+            --bg-input: #21262d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #1f6feb;
+            --success: #238636;
+            --danger: #da3633;
+            --border: #30363d;
+            --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'Space Mono', SFMono-Regular, Consolas, monospace;
         }
 
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-        html, body {
-            height: 100%;
-            background: var(--bg);
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            color: var(--text);
-        }
-
-        body { display: flex; flex-direction: column; overflow: hidden; }
-
-        /* ===== APP SHELL ===== */
-        .app {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-main);
+            color: var(--text-main);
             display: flex;
-            flex-direction: column;
-            height: 100dvh;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
             width: 100%;
             max-width: 480px;
-            margin: 0 auto;
-            background: var(--bg);
-            overflow: hidden;
+            height: 100vh;
+            background-color: var(--bg-main);
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
             position: relative;
         }
 
-        /* ===== SCREENS ===== */
-        .screen {
-            display: none;
-            flex-direction: column;
-            flex: 1;
-            overflow: hidden;
-            position: absolute;
-            inset: 0;
-        }
+        .screen { display: none; flex-direction: column; height: 100%; width: 100%; animation: fadeIn 0.2s ease-in-out; }
         .screen.active { display: flex; }
-        .screen.slide-in  { animation: slideIn  0.28s cubic-bezier(0.4,0,0.2,1) both; }
-        .screen.slide-out { animation: slideOut 0.28s cubic-bezier(0.4,0,0.2,1) both; }
 
-        @keyframes slideIn  { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-30%); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ===== SETUP SCREEN ===== */
-        #screen-setup {
-            background: var(--bg);
-            align-items: center;
-            justify-content: center;
-            padding: 32px 20px;
-            overflow-y: auto;
-        }
+        /* Setup Screen */
+        .setup-box { padding: 2rem; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+        .brand { text-align: center; margin-bottom: 2.5rem; }
+        .brand h1 { font-family: var(--font-mono); font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+        .tab-btn { flex: 1; padding: 0.75rem; background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        input, textarea { background-color: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; color: var(--text-main); font-family: inherit; font-size: 1rem; transition: border-color 0.2s; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        .btn { background-color: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn:disabled { background-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #b62b28; }
 
-        .setup-bg-glow {
-            position: absolute;
-            top: -120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 340px;
-            height: 340px;
-            background: radial-gradient(circle, rgba(0,229,160,0.12) 0%, transparent 70%);
-            pointer-events: none;
-            border-radius: 50%;
-        }
+        /* Header components */
+        .app-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-surface); min-height: 60px; }
+        .header-title { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+        .header-actions { display: flex; gap: 0.75rem; }
+        .icon-btn { background: none; border: none; color: var(--text-main); cursor: pointer; padding: 0.25rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
 
-        .setup-card {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 36px 28px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: var(--shadow);
-            position: relative;
-            z-index: 1;
-            animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both;
-        }
+        /* Main Screen Layout */
+        .main-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .chat-list-item { display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background-color 0.15s; }
+        .chat-list-item:hover { background-color: var(--bg-surface); }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background-color: var(--bg-input); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent); font-family: var(--font-mono); margin-right: 1rem; position: relative; }
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+        .chat-name { font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-time { font-size: 0.75rem; color: var(--text-muted); }
+        .chat-preview { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge { background-color: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 18px; text-align: center; }
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(24px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+        /* Chat Room Screen */
+        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; background-color: var(--bg-main); }
+        .msg-bubble { max-width: 75%; padding: 0.65rem 0.85rem; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; position: relative; word-break: break-word; }
+        .msg-bubble.sent { background-color: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg-bubble.received { background-color: var(--bg-surface); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid var(--border); }
+        .msg-time { font-size: 0.65rem; display: block; text-align: right; margin-top: 0.25rem; opacity: 0.8; font-family: var(--font-mono); }
+        .msg-bubble.received .msg-time { color: var(--text-muted); }
 
-        .setup-logo {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .setup-logo .logo-wrap {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 72px; height: 72px;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            border-radius: 22px;
-            margin-bottom: 16px;
-            box-shadow: 0 0 40px rgba(0,229,160,0.25);
-        }
-        .setup-logo .logo-wrap svg { width: 36px; height: 36px; fill: #000; }
-        .setup-logo h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.5px;
-        }
-        .setup-logo p {
-            font-size: 0.8rem;
-            color: var(--text2);
-            margin-top: 6px;
-            line-height: 1.5;
-        }
-        .setup-logo .e2e-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0,229,160,0.12);
-            color: var(--accent);
-            border: 1px solid rgba(0,229,160,0.25);
-            border-radius: 20px;
-            padding: 3px 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-top: 10px;
-            letter-spacing: 0.5px;
-        }
+        .chat-input-area { padding: 0.75rem 1rem; border-top: 1px solid var(--border); background-color: var(--bg-surface); display: flex; align-items: flex-end; gap: 0.75rem; }
+        .chat-textarea { flex: 1; background-color: var(--bg-input); border: 1px solid var(--border); border-radius: 20px; padding: 0.6rem 1rem; color: var(--text-main); font-family: inherit; font-size: 0.95rem; resize: none; max-height: 100px; line-height: 1.3; }
 
-        .form-group { margin-bottom: 18px; }
-        .form-group label {
-            display: block;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--text2);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-        .form-group input {
-            width: 100%;
-            background: var(--bg3);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 13px 16px;
-            font-size: 0.95rem;
-            color: var(--text);
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-            font-family: inherit;
-        }
-        .form-group input::placeholder { color: var(--text3); }
-        .form-group input:focus {
-            border-color: var(--accent);
-            background: var(--bg2);
-            box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
-        }
-        .form-group .hint {
-            font-size: 0.7rem;
-            color: var(--text3);
-            margin-top: 6px;
-        }
-        .form-group .error-msg {
-            font-size: 0.72rem;
-            color: var(--danger);
-            margin-top: 6px;
-            display: none;
-        }
-        .form-group .error-msg.show { display: block; }
+        /* Profile & Action Sheets */
+        .profile-card { padding: 2rem 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .profile-avatar { width: 80px; height: 80px; font-size: 2rem; border-radius: 50%; background-color: var(--bg-surface); border: 3px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--accent); font-family: var(--font-mono); }
+        .uid-container { background-color: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; width: 100%; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 0.9rem; margin-top: 1rem; margin-bottom: 2rem; }
+        .uid-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; padding-right: 0.5rem; color: var(--accent); }
 
-        .btn-primary {
-            width: 100%;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            border: none;
-            border-radius: var(--radius-sm);
-            padding: 14px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: #000;
-            cursor: pointer;
-            transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
-            font-family: inherit;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 20px rgba(0,229,160,0.3);
-        }
-        .btn-primary:hover:not(:disabled) {
-            opacity: 0.92;
-            box-shadow: 0 6px 24px rgba(0,229,160,0.45);
-        }
-        .btn-primary:active:not(:disabled) { transform: scale(0.98); }
-        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+        /* Toast Notification */
+        .toast { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 0.85rem; pointer-events: none; opacity: 0; transition: all 0.2s ease; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-weight: 500; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        /* ===== HOME SCREEN ===== */
-        #screen-home { background: var(--bg); }
-
-        .home-header {
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 18px;
-            padding-top: max(14px, env(safe-area-inset-top));
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-        .home-header .brand { display: flex; align-items: center; gap: 10px; }
-        .home-header .brand-icon {
-            width: 36px; height: 36px;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .home-header .brand-icon svg { width: 18px; height: 18px; fill: #000; }
-        .home-header h1 {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.3px;
-        }
-        .home-header .hdr-actions { display: flex; gap: 8px; }
-        .icon-btn {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text2);
-            width: 38px; height: 38px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
-        }
-        .icon-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--accent); }
-        .icon-btn svg { width: 18px; height: 18px; }
-
-        /* Conn bar */
-        .conn-bar {
-            padding: 5px 18px;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            font-size: 0.68rem;
-            color: var(--text2);
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            flex-shrink: 0;
-        }
-        .conn-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--text3);
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-        .conn-dot.online { background: var(--accent); box-shadow: 0 0 6px rgba(0,229,160,0.6); }
-        .conn-dot.offline { background: var(--danger); }
-
-        /* Chat List */
-        .chat-list { flex: 1; overflow-y: auto; }
-        .chat-list::-webkit-scrollbar { width: 3px; }
-        .chat-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        .chat-list-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text2);
-            text-align: center;
-            padding: 40px 32px;
-            gap: 14px;
-        }
-        .chat-list-empty .empty-glyph {
-            width: 80px; height: 80px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 4px;
-        }
-        .chat-list-empty .empty-glyph svg { width: 36px; height: 36px; stroke: var(--text3); fill: none; stroke-width: 1.5; }
-        .chat-list-empty h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
-        .chat-list-empty p { font-size: 0.82rem; line-height: 1.6; color: var(--text2); }
-        .chat-list-empty button {
-            margin-top: 4px;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: var(--radius-md);
-            padding: 11px 24px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
-            transition: opacity 0.15s, transform 0.1s;
-        }
-        .chat-list-empty button:hover { opacity: 0.88; }
-        .chat-list-empty button:active { transform: scale(0.97); }
-
-        .chat-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 15px 18px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            transition: background 0.15s;
-            position: relative;
-        }
-        .chat-item:hover { background: var(--bg2); }
-        .chat-item:active { background: var(--bg3); }
-
-        .ci-avatar {
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #000;
-            flex-shrink: 0;
-            letter-spacing: -1px;
-        }
-        .ci-info { flex: 1; min-width: 0; }
-        .ci-name { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-        .ci-preview {
-            font-size: 0.78rem;
-            color: var(--text2);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .ci-meta { flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .ci-time { font-size: 0.68rem; color: var(--text3); }
-        .ci-badge {
-            background: var(--accent);
-            color: #000;
-            border-radius: 50%;
-            min-width: 20px; height: 20px;
-            padding: 0 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.65rem;
-            font-weight: 700;
-        }
-
-        /* ===== TOP BAR (generic) ===== */
-        .top-bar {
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 18px;
-            padding-top: max(14px, env(safe-area-inset-top));
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--text);
-            flex-shrink: 0;
-            min-height: 60px;
-        }
-        .top-bar h1 { font-size: 1.05rem; font-weight: 600; flex: 1; }
-        .back-btn {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text2);
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: background 0.2s, color 0.2s;
-        }
-        .back-btn:hover { background: var(--bg3); color: var(--text); }
-        .back-btn svg { width: 16px; height: 16px; }
-
-        /* ===== SEARCH SCREEN ===== */
-        #screen-search { background: var(--bg); }
-        .search-bar {
-            padding: 12px 16px;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-        .search-input-wrap {
-            display: flex;
-            align-items: center;
-            background: var(--bg2);
-            border-radius: var(--radius-sm);
-            padding: 0 14px;
-            gap: 10px;
-            border: 1.5px solid var(--border);
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .search-input-wrap:focus-within {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
-        }
-        .search-input-wrap svg { width: 17px; height: 17px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
-        .search-input-wrap input {
-            flex: 1;
-            border: none;
-            outline: none;
-            padding: 12px 0;
-            font-size: 0.92rem;
-            color: var(--text);
-            background: transparent;
-            font-family: inherit;
-        }
-        .search-input-wrap input::placeholder { color: var(--text3); }
-
-        .search-results { flex: 1; overflow-y: auto; }
-        .search-result-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 15px 18px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .search-result-item:hover { background: var(--bg2); }
-        .sr-avatar {
-            width: 46px; height: 46px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent2), var(--accent3));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #000;
-            flex-shrink: 0;
-        }
-        .sr-info { flex: 1; }
-        .sr-name { font-size: 0.95rem; font-weight: 600; color: var(--text); }
-        .sr-username { font-size: 0.78rem; color: var(--text2); }
-        .sr-action {
-            background: rgba(0,229,160,0.15);
-            color: var(--accent);
-            border: 1px solid rgba(0,229,160,0.3);
-            border-radius: var(--radius-md);
-            padding: 7px 16px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-            flex-shrink: 0;
-            font-family: inherit;
-            transition: background 0.15s, border-color 0.15s;
-        }
-        .sr-action:hover { background: rgba(0,229,160,0.25); border-color: var(--accent); }
-
-        .search-hint {
-            padding: 48px 24px;
-            text-align: center;
-            color: var(--text2);
-            font-size: 0.85rem;
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-        .search-hint .hint-glyph {
-            width: 64px; height: 64px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .search-hint .hint-glyph svg { width: 28px; height: 28px; stroke: var(--text3); fill: none; stroke-width: 1.5; }
-
-        /* ===== PROFILE SCREEN ===== */
-        #screen-profile { background: var(--bg); }
-        .profile-body { flex: 1; overflow-y: auto; }
-        .profile-body::-webkit-scrollbar { width: 3px; }
-        .profile-body::-webkit-scrollbar-thumb { background: var(--border); }
-
-        .profile-hero {
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 28px 24px 32px;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-        }
-        .profile-hero::before {
-            content: '';
-            position: absolute;
-            top: -80px; left: 50%;
-            transform: translateX(-50%);
-            width: 260px; height: 260px;
-            background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        .profile-avatar-big {
-            width: 90px; height: 90px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #000;
-            border: 3px solid rgba(0,229,160,0.3);
-            box-shadow: 0 0 32px rgba(0,229,160,0.2);
-            position: relative;
-            z-index: 1;
-        }
-        .profile-displayname { color: var(--text); font-size: 1.2rem; font-weight: 700; position: relative; z-index: 1; }
-        .profile-username { color: var(--text2); font-size: 0.85rem; position: relative; z-index: 1; }
-        .profile-uid-badge {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text3);
-            border-radius: 20px;
-            padding: 4px 14px;
-            font-size: 0.65rem;
-            font-family: 'Space Mono', monospace;
-            letter-spacing: 0.3px;
-            position: relative; z-index: 1;
-        }
-
-        .profile-section {
-            background: var(--bg2);
-            margin: 14px 16px 0;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-        .profile-section-title {
-            padding: 12px 16px 10px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            border-bottom: 1px solid var(--border);
-        }
-        .profile-field {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
-        }
-        .profile-field:last-child { border-bottom: none; }
-        .profile-field label {
-            font-size: 0.68rem;
-            color: var(--text3);
-            font-weight: 600;
-            display: block;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .profile-field input {
-            width: 100%;
-            border: none;
-            outline: none;
-            font-size: 0.95rem;
-            color: var(--text);
-            background: transparent;
-            font-family: inherit;
-            padding: 0;
-        }
-        .profile-field input::placeholder { color: var(--text3); }
-        .profile-field input:disabled { color: var(--text2); }
-
-        .profile-save-btn {
-            margin: 14px 16px;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            color: #000;
-            border: none;
-            border-radius: var(--radius-sm);
-            padding: 14px;
-            width: calc(100% - 32px);
-            font-size: 0.9rem;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
-            transition: opacity 0.15s, transform 0.1s;
-            box-shadow: 0 4px 16px rgba(0,229,160,0.25);
-        }
-        .profile-save-btn:hover { opacity: 0.88; }
-        .profile-save-btn:active { transform: scale(0.98); }
-        .profile-save-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
-
-        .profile-danger-btn {
-            margin: 4px 16px 24px;
-            background: transparent;
-            color: var(--danger);
-            border: 1px solid rgba(248,81,73,0.3);
-            border-radius: var(--radius-sm);
-            padding: 12px;
-            width: calc(100% - 32px);
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.15s;
-        }
-        .profile-danger-btn:hover { background: rgba(248,81,73,0.1); border-color: var(--danger); }
-
-        /* ===== CHAT SCREEN ===== */
-        #screen-chat { background: var(--bg); }
-
-        .chat-top-bar {
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            padding: 10px 16px;
-            padding-top: max(10px, env(safe-area-inset-top));
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-        .chat-peer-avatar {
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #000;
-            flex-shrink: 0;
-        }
-        .chat-peer-info { flex: 1; min-width: 0; }
-        .chat-peer-name { font-size: 0.95rem; font-weight: 700; color: var(--text); }
-        .chat-peer-status { font-size: 0.7rem; color: var(--text2); }
-        .e2e-badge {
-            background: rgba(0,229,160,0.1);
-            color: var(--accent);
-            border: 1px solid rgba(0,229,160,0.2);
-            border-radius: 20px;
-            padding: 3px 10px;
-            font-size: 0.62rem;
-            font-weight: 700;
-            flex-shrink: 0;
-            letter-spacing: 0.3px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 14px 14px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            min-height: 0;
-            padding-bottom: max(14px, env(safe-area-inset-bottom));
-            background: var(--bg);
-        }
-        .chat-messages::-webkit-scrollbar { width: 3px; }
-        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        .chat-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 12px;
-            text-align: center;
-            color: var(--text2);
-        }
-        .chat-empty .lock-wrap {
-            width: 60px; height: 60px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .chat-empty .lock-wrap svg { width: 26px; height: 26px; stroke: var(--text3); fill: none; stroke-width: 1.5; }
-        .chat-empty p { font-size: 0.82rem; line-height: 1.6; max-width: 230px; color: var(--text3); }
-
-        .message {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            animation: msgIn 0.2s cubic-bezier(0.4,0,0.2,1) both;
-        }
-        @keyframes msgIn {
-            from { opacity: 0; transform: translateY(8px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .message.own { align-items: flex-end; }
-
-        .message .bubble {
-            padding: 10px 14px;
-            border-radius: 18px;
-            word-break: break-word;
-            max-width: 80%;
-            line-height: 1.5;
-            font-size: 0.9rem;
-        }
-        .message.own .bubble {
-            background: var(--own-msg);
-            color: var(--text);
-            border-bottom-right-radius: 5px;
-            border: 1px solid rgba(0,229,160,0.15);
-        }
-        .message:not(.own) .bubble {
-            background: var(--peer-msg);
-            color: var(--text);
-            border-bottom-left-radius: 5px;
-            border: 1px solid var(--border);
-        }
-        .message .meta {
-            font-size: 0.6rem;
-            color: var(--text3);
-            padding: 0 6px;
-        }
-
-        .sys-msg {
-            text-align: center;
-            font-size: 0.68rem;
-            color: var(--text3);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 4px 14px;
-            margin: 4px auto;
-            max-width: 90%;
-        }
-        .date-sep {
-            text-align: center;
-            font-size: 0.66rem;
-            color: var(--text3);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 3px 12px;
-            margin: 8px auto;
-            max-width: fit-content;
-        }
-
-        /* Input panel */
-        .input-panel {
-            background: var(--bg2);
-            border-top: 1px solid var(--border);
-            padding: 10px 14px;
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-shrink: 0;
-        }
-        .input-panel textarea {
-            flex: 1;
-            background: var(--bg3);
-            border: 1.5px solid var(--border);
-            border-radius: 22px;
-            padding: 10px 16px;
-            font-size: 0.9rem;
-            font-family: inherit;
-            color: var(--text);
-            resize: none;
-            max-height: 100px;
-            outline: none;
-            line-height: 1.4;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .input-panel textarea::placeholder { color: var(--text3); }
-        .input-panel textarea:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0,229,160,0.08);
-        }
-        .input-panel textarea:disabled { color: var(--text3); cursor: not-allowed; }
-
-        .send-btn {
-            flex-shrink: 0;
-            width: 44px; height: 44px;
-            background: var(--accent);
-            border: none;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s, box-shadow 0.2s;
-            box-shadow: 0 4px 14px rgba(0,229,160,0.3);
-        }
-        .send-btn svg { width: 18px; height: 18px; fill: #000; }
-        .send-btn:hover:not(:disabled) { background: var(--accent3); box-shadow: 0 4px 18px rgba(0,229,160,0.5); }
-        .send-btn:active:not(:disabled) { transform: scale(0.93); }
-        .send-btn:disabled { background: var(--surface); box-shadow: none; cursor: not-allowed; }
-        .send-btn:disabled svg { fill: var(--text3); }
-
-        /* ===== TOAST ===== */
-        #toast {
-            position: fixed;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%) translateY(8px);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 20px;
-            border-radius: var(--radius-md);
-            font-size: 0.82rem;
-            z-index: 9999;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.25s, transform 0.25s;
-            white-space: nowrap;
-            max-width: 90vw;
-            text-align: center;
-            box-shadow: var(--shadow);
-        }
-        #toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ===== LOADING OVERLAY ===== */
-        #loading-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(13,17,23,0.7);
-            backdrop-filter: blur(4px);
-            z-index: 500;
-            align-items: center;
-            justify-content: center;
-        }
-        #loading-overlay.show { display: flex; }
-        .spinner {
-            width: 40px; height: 40px;
-            border: 3px solid var(--surface);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ===== PWA INSTALL BANNER ===== */
-        #install-banner {
-            display: none;
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 16px;
-            font-size: 0.8rem;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        #install-banner.show { display: flex; }
-        #install-banner .install-btn {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            padding: 7px 16px;
-            font-size: 0.76rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-weight: 700;
-            white-space: nowrap;
-            font-family: inherit;
-        }
-        #install-banner .dismiss-btn {
-            background: transparent;
-            border: none;
-            color: var(--text3);
-            font-size: 1.1rem;
-            cursor: pointer;
-            padding: 4px;
-            line-height: 1;
-        }
-
-        /* ===== PROFILE ERROR ===== */
-        .profile-err-wrap { margin: 6px 16px 0; }
-        .profile-err-wrap .error-msg {
-            font-size: 0.75rem;
-            color: var(--danger);
-            display: none;
-            padding: 8px 12px;
-            background: rgba(248,81,73,0.08);
-            border: 1px solid rgba(248,81,73,0.2);
-            border-radius: var(--radius-sm);
-        }
-        .profile-err-wrap .error-msg.show { display: block; }
-
-        /* ===== SETUP TABS ===== */
-        .setup-tabs {
-            display: flex;
-            background: var(--bg3);
-            border-radius: var(--radius-sm);
-            padding: 3px;
-            margin-bottom: 22px;
-            gap: 3px;
-        }
-        .setup-tab {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            padding: 9px 8px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--text2);
-            cursor: pointer;
-            transition: background 0.18s, color 0.18s;
-            font-family: inherit;
-            letter-spacing: 0.2px;
-        }
-        .setup-tab.active {
-            background: var(--accent);
-            color: #000;
-        }
-        .setup-tab:not(.active):hover {
-            background: var(--surface);
-            color: var(--text);
-        }
-
-        /* ===== LOGIN INFO BOX ===== */
-        .login-info-box {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: rgba(0,229,160,0.06);
-            border: 1px solid rgba(0,229,160,0.2);
-            border-radius: var(--radius-sm);
-            padding: 12px 14px;
-            margin-bottom: 18px;
-            color: var(--text2);
-            font-size: 0.78rem;
-            line-height: 1.5;
-        }
-        .login-info-box svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
-
-        /* ===== LOGOUT BUTTON ===== */
-        .btn-logout {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: calc(100% - 32px);
-            margin: 12px 16px 24px;
-            background: transparent;
-            border: 1.5px solid rgba(248,81,73,0.35);
-            border-radius: var(--radius-sm);
-            padding: 13px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            color: var(--danger);
-            cursor: pointer;
-            transition: background 0.18s, border-color 0.18s;
-            font-family: inherit;
-        }
-        .btn-logout:hover { background: rgba(248,81,73,0.08); border-color: var(--danger); }
-
-        .btn-logout {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: calc(100% - 32px);
-            margin: 10px 16px 24px;
-            background: transparent;
-            border: 1.5px solid rgba(248,81,73,0.35);
-            border-radius: var(--radius-sm);
-            padding: 13px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--danger);
-            cursor: pointer;
-            font-family: inherit;
-            transition: background 0.18s, border-color 0.18s;
-        }
-        .btn-logout:hover { background: rgba(248,81,73,0.08); border-color: var(--danger); }
-        .btn-logout:active { background: rgba(248,81,73,0.14); }
-
-        /* ===== PASSWORD INPUT ===== */
-        .pw-wrap {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .pw-wrap input {
-            width: 100%;
-            padding-right: 44px;
-        }
-        .pw-toggle {
-            position: absolute;
-            right: 12px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: var(--text3);
-            display: flex;
-            align-items: center;
-            transition: color 0.2s;
-        }
-        .pw-toggle:hover { color: var(--text2); }
-        .pw-toggle svg { width: 17px; height: 17px; }
-
-        @media (max-width: 600px) {
-            .app { max-width: 100%; }
-        }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 2rem; gap: 0.5rem; }
+        .empty-state span { font-size: 2.5rem; }
     </style>
 </head>
 <body>
-    <div class="app">
-        <!-- PWA Install Banner -->
-        <div id="install-banner">
-            <span>📲 Install SecureChat sebagai aplikasi</span>
-            <div style="display:flex;gap:6px">
-                <button class="install-btn" id="install-btn">Install</button>
-                <button class="dismiss-btn" id="dismiss-install">✕</button>
-            </div>
-        </div>
 
-        <!-- ============ SCREEN: SETUP ============ -->
-        <div class="screen active" id="screen-setup">
-            <div class="setup-bg-glow"></div>
-            <div class="setup-card">
-                <div class="setup-logo">
-                    <div class="logo-wrap">
-                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z"/></svg>
-                    </div>
-                    <h2>SecureChat</h2>
-                    <p>Chat terenkripsi end-to-end<br>Tanpa SMS • Tanpa nomor HP</p>
-                    <div class="e2e-pill">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-                        ENKRIPSI E2EE
-                    </div>
-                </div>
-
-                <!-- TAB SWITCHER -->
-                <div class="setup-tabs">
-                    <button class="setup-tab active" id="tab-register" onclick="switchSetupTab('register')">Daftar Baru</button>
-                    <button class="setup-tab" id="tab-login" onclick="switchSetupTab('login')">Sudah Punya Akun</button>
-                </div>
-
-                <!-- PANEL: REGISTER -->
-                <div id="panel-register">
-                    <div class="form-group">
-                        <label>Nama Tampilan</label>
-                        <input type="text" id="setup-displayname" placeholder="Nama Anda (misal: Budi)" maxlength="40" autocomplete="off">
-                        <div class="hint">Nama yang terlihat oleh pengguna lain</div>
-                    </div>
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="setup-username" placeholder="username_unik" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
-                        <div class="hint">Huruf kecil, angka, underscore (3–30 karakter)</div>
-                        <div class="error-msg" id="setup-username-error"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <div class="pw-wrap">
-                            <input type="password" id="setup-password" placeholder="Minimal 6 karakter" maxlength="128" autocomplete="new-password">
-                            <button type="button" class="pw-toggle" onclick="togglePw('setup-password', this)" tabindex="-1">
-                                <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                <svg class="eye-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                            </button>
-                        </div>
-                        <div class="hint">Password untuk melindungi akun Anda</div>
-                        <div class="error-msg" id="setup-password-error"></div>
-                    </div>
-                    <button class="btn-primary" id="setup-btn">Mulai SecureChat</button>
-                </div>
-
-                <!-- PANEL: LOGIN -->
-                <div id="panel-login" style="display:none">
-                    <div class="login-info-box">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                        <span>Masuk ke akun yang sudah dibuat sebelumnya di perangkat lain atau browser berbeda.</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="login-username" placeholder="username_anda" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false">
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <div class="pw-wrap">
-                            <input type="password" id="login-password" placeholder="Password Anda" maxlength="128" autocomplete="current-password">
-                            <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)" tabindex="-1">
-                                <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                <svg class="eye-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                            </button>
-                        </div>
-                        <div class="error-msg" id="login-error"></div>
-                    </div>
-                    <button class="btn-primary" id="login-btn">Masuk ke Akun</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ SCREEN: HOME ============ -->
-        <div class="screen" id="screen-home">
-            <div class="home-header">
+    <div class="app-container">
+        
+        <div id="screen-setup" class="screen active">
+            <div class="setup-box">
                 <div class="brand">
-                    <div class="brand-icon">
-                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z"/></svg>
-                    </div>
                     <h1>SecureChat</h1>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">End-to-End Encrypted Messaging</p>
                 </div>
-                <div class="hdr-actions">
-                    <button class="icon-btn" id="btn-go-search" title="Cari pengguna">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </button>
-                    <button class="icon-btn" id="btn-go-profile" title="Profil saya">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </button>
+                
+                <div class="tabs">
+                    <button id="tab-btn-login" class="tab-btn active">MASUK</button>
+                    <button id="tab-btn-register" class="tab-btn">DAFTAR BARU</button>
                 </div>
-            </div>
 
-            <div id="conn-bar-home" class="conn-bar">
-                <div class="conn-dot" id="conn-dot"></div>
-                <span id="conn-label">Menghubungkan...</span>
-            </div>
-
-            <div class="chat-list" id="chat-list">
-                <div class="chat-list-empty" id="chat-list-empty">
-                    <div class="empty-glyph">
-                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div id="form-login" class="setup-form">
+                    <div class="form-group">
+                        <label for="login-uid">User ID (UID) Anda</label>
+                        <input type="text" id="login-uid" placeholder="Masukkan UID akun Anda...">
                     </div>
-                    <h3>Belum ada percakapan</h3>
-                    <p>Cari pengguna lain untuk memulai chat terenkripsi.</p>
-                    <button onclick="showScreen('search')">Cari Pengguna</button>
+                    <button id="login-submit" class="btn" style="width: 100%;">Masuk ke Aplikasi</button>
+                </div>
+
+                <div id="form-register" class="setup-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="reg-name">Nama Tampilan</label>
+                        <input type="text" id="reg-name" placeholder="Contoh: Alice, Bob, dll.">
+                    </div>
+                    <button id="register-submit" class="btn" style="width: 100%;">Buat Akun & Generate Kunci</button>
                 </div>
             </div>
         </div>
 
-        <!-- ============ SCREEN: SEARCH ============ -->
-        <div class="screen" id="screen-search">
-            <div class="top-bar">
-                <button class="back-btn" onclick="showScreen('home')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <h1>Cari Pengguna</h1>
-            </div>
-            <div class="search-bar">
-                <div class="search-input-wrap">
-                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="search-input" placeholder="Ketik username..." autocomplete="off" autocapitalize="none" spellcheck="false">
+        <div id="screen-home" class="screen">
+            <div class="app-header">
+                <span class="header-title">SecureChat</span>
+                <div class="header-actions">
+                    <button id="home-add-btn" class="icon-btn" title="Chat Baru">💬</button>
+                    <button id="home-profile-btn" class="icon-btn" title="Profil">👤</button>
                 </div>
             </div>
-            <div class="search-results" id="search-results">
-                <div class="search-hint">
-                    <div class="hint-glyph">
-                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div class="main-content" id="chat-list-container">
+                </div>
+        </div>
+
+        <div id="screen-add-chat" class="screen">
+            <div class="app-header">
+                <button id="add-back-btn" class="icon-btn">⬅️</button>
+                <span class="header-title">Mulai Obrolan</span>
+                <div style="width:24px;"></div>
+            </div>
+            <div class="setup-box" style="justify-content: flex-start; padding-top: 2rem;">
+                <div class="form-group">
+                    <label for="peer-uid-input">UID Tujuan Teman</label>
+                    <input type="text" id="peer-uid-input" placeholder="Tempel/Masukkan UID teman...">
+                </div>
+                <button id="start-chat-submit" class="btn" style="width: 100%;">Cari & Buka Obrolan</button>
+            </div>
+        </div>
+
+        <div id="screen-chat-room" class="screen">
+            <div class="app-header">
+                <button id="chat-back-btn" class="icon-btn">⬅️</button>
+                <div style="flex: 1; margin-left: 0.75rem; min-width: 0;">
+                    <div id="chat-room-title" style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nama Teman</div>
+                    <div style="font-size: 0.7rem; color: var(--success); font-family: var(--font-mono);">🔒 E2EE Active</div>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages-container">
+                </div>
+            <div class="chat-input-area">
+                <textarea id="message-input" class="chat-textarea" rows="1" placeholder="Ketik pesan aman..."></textarea>
+                <button id="send-btn" class="btn" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;" disabled>➡️</button>
+            </div>
+        </div>
+
+        <div id="screen-profile" class="screen">
+            <div class="app-header">
+                <button id="profile-back-btn" class="icon-btn">⬅️</button>
+                <span class="header-title">Profil Saya</span>
+                <div style="width:24px;"></div>
+            </div>
+            <div class="main-content">
+                <div class="profile-card">
+                    <div class="profile-avatar" id="my-avatar-char">U</div>
+                    <h2 id="my-profile-name" style="margin-top: 0.5rem;">Nama Pengguna</h2>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Bagikan UID di bawah ini kepada teman Anda untuk mulai berkomunikasi terenkripsi:</p>
+                    
+                    <div class="uid-container">
+                        <span class="uid-text" id="my-uid-display">Mencari UID...</span>
+                        <button id="copy-uid-btn" class="icon-btn" style="font-size: 1rem;" title="Salin UID">📋</button>
                     </div>
-                    <p>Ketik username untuk mencari pengguna SecureChat</p>
+
+                    <button id="logout-btn" class="btn btn-danger" style="width: 100%; margin-top: 2rem;">Keluar dari Akun</button>
                 </div>
             </div>
         </div>
 
-        <!-- ============ SCREEN: PROFILE ============ -->
-        <div class="screen" id="screen-profile">
-            <div class="top-bar">
-                <button class="back-btn" onclick="showScreen('home')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <h1>Profil Saya</h1>
-            </div>
-            <div class="profile-body">
-                <div class="profile-hero">
-                    <div class="profile-avatar-big" id="profile-avatar-big">?</div>
-                    <div class="profile-displayname" id="profile-display-hero">-</div>
-                    <div class="profile-username" id="profile-username-hero">@-</div>
-                    <div class="profile-uid-badge" id="profile-uid-badge">UID: ...</div>
-                </div>
+        <div id="app-toast" class="toast">Notifikasi</div>
 
-                <div class="profile-section">
-                    <div class="profile-section-title">Edit Profil</div>
-                    <div class="profile-field">
-                        <label>Nama Tampilan</label>
-                        <input type="text" id="profile-displayname-input" maxlength="40" placeholder="Nama tampilan">
-                    </div>
-                    <div class="profile-field">
-                        <label>Username</label>
-                        <input type="text" id="profile-username-input" maxlength="30" placeholder="username" autocapitalize="none">
-                    </div>
-                </div>
-
-                <div class="profile-err-wrap">
-                    <div class="error-msg" id="profile-error"></div>
-                </div>
-
-                <button class="profile-save-btn" id="profile-save-btn">Simpan Perubahan</button>
-
-                <button class="btn-logout" id="logout-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Keluar dari Akun
-                </button>
-            </div>
-        </div>
-
-        <!-- ============ SCREEN: CHAT ============ -->
-        <div class="screen" id="screen-chat">
-            <div class="chat-top-bar">
-                <button class="back-btn" id="chat-back-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <div class="chat-peer-avatar" id="chat-peer-avatar">?</div>
-                <div class="chat-peer-info">
-                    <div class="chat-peer-name" id="chat-peer-name">...</div>
-                    <div class="chat-peer-status" id="chat-peer-status">@username</div>
-                </div>
-                <div class="e2e-badge">🔐 E2EE</div>
-            </div>
-            <div class="chat-messages" id="chat-messages">
-                <div class="chat-empty" id="chat-empty">
-                    <div class="lock-wrap">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    </div>
-                    <p>Pesan terenkripsi end-to-end. Hanya Anda dan penerima yang bisa membacanya.</p>
-                </div>
-            </div>
-            <div class="input-panel">
-                <textarea id="message-input" placeholder="Tulis pesan..." rows="1" disabled></textarea>
-                <button class="send-btn" id="send-btn" disabled>
-                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-            </div>
-        </div>
     </div>
-
-    <!-- Overlay & Toast -->
-    <div id="toast"></div>
-    <div id="loading-overlay"><div class="spinner"></div></div>
 
     <script>
     // ============================================================
-    //  PWA ICON + MANIFEST + SERVICE WORKER
+    //  GLOBAL STATE & CONFIG
     // ============================================================
-    (function() {
-        // Icon PNG files are served from root; generate canvas fallback only if they fail to load
-        function generateIconDataURL(size) {
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = size;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#0d1117';
-            ctx.beginPath();
-            ctx.roundRect(0, 0, size, size, size * 0.2);
-            ctx.fill();
-            ctx.font = `${size * 0.55}px serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('\uD83D\uDCAC', size / 2, size / 2);
-            return canvas.toDataURL('image/png');
-        }
-        // Fallback: jika PNG gagal load, ganti dengan canvas-generated icon
-        const _iconTest = new Image();
-        _iconTest.onerror = () => {
-            const fb192 = generateIconDataURL(192);
-            const fb512 = generateIconDataURL(512);
-            document.getElementById('icon-192').href = fb192;
-            document.getElementById('icon-512').href = fb512;
-            document.getElementById('apple-icon').href = fb192;
-        };
-        _iconTest.src = 'icon-192.png';
+    let db = null;
+    let myUID = null;
+    let myName = null;
+    let myPrivateKey = null;   // CryptoKey Object (Disimpan di IndexedDB)
+    let myPublicKeyB64 = null; // String Base64 (Tersimpan di Firebase)
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js', { scope: './' })
-                .then(r => console.log('[PWA] SW registered, scope:', r.scope))
-                .catch(e => console.warn('[PWA] SW failed:', e.message));
-        }
-    })();
-
-    // ============================================================
-    //  PWA INSTALL BANNER
-    // ============================================================
-    let deferredInstallPrompt = null;
-    const installBanner = document.getElementById('install-banner');
-    window.addEventListener('beforeinstallprompt', e => {
-        e.preventDefault();
-        deferredInstallPrompt = e;
-        if (!localStorage.getItem('pwa-dismissed')) installBanner.classList.add('show');
-    });
-    document.getElementById('install-btn').addEventListener('click', async () => {
-        if (!deferredInstallPrompt) { showToast('Gunakan menu browser → Add to Home Screen'); return; }
-        deferredInstallPrompt.prompt();
-        const { outcome } = await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-        installBanner.classList.remove('show');
-        if (outcome === 'accepted') showToast('✅ SecureChat berhasil diinstall!');
-    });
-    document.getElementById('dismiss-install').addEventListener('click', () => {
-        installBanner.classList.remove('show');
-        localStorage.setItem('pwa-dismissed', '1');
-    });
-    window.addEventListener('appinstalled', () => {
-        installBanner.classList.remove('show');
-        showToast('📲 Aplikasi terinstall! Buka dari home screen.');
-    });
-
-    // ============================================================
-    //  UTILITIES
-    // ============================================================
-    function showToast(msg, duration = 2800) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('show');
-        clearTimeout(t._timer);
-        t._timer = setTimeout(() => t.classList.remove('show'), duration);
-    }
-    function setLoading(on) {
-        document.getElementById('loading-overlay').classList.toggle('show', on);
-    }
-    function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
-    }
-    function autoResize(el) {
-        requestAnimationFrame(() => {
-            el.style.height = 'auto';
-            el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-        });
-    }
-    function validateUsername(u) {
-        return /^[a-z0-9_]{3,30}$/.test(u);
-    }
-    function getInitial(name) {
-        return (name || '?')[0].toUpperCase();
-    }
-    function formatTime(ts) {
-        const d = new Date(ts);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    function formatChatTime(ts) {
-        const now = new Date();
-        const d = new Date(ts);
-        const diff = now - d;
-        if (diff < 86400000 && now.getDate() === d.getDate()) return formatTime(ts);
-        if (diff < 172800000) return 'Kemarin';
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-    }
-
-    // ============================================================
-    //  SCREEN NAVIGATION
-    // ============================================================
-    let currentScreen = 'setup';
-    function showScreen(name) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        const next = document.getElementById('screen-' + name);
-        next.classList.add('active');
-        currentScreen = name;
-        if (name === 'home') renderChatList();
-        if (name === 'profile') renderProfile();
-        if (name === 'search') {
-            document.getElementById('search-input').value = '';
-            setSearchHint('Ketik username untuk mencari pengguna SecureChat');
-            setTimeout(() => document.getElementById('search-input').focus(), 300);
-        }
-    }
-
-    // ============================================================
-    //  FIREBASE CONFIG
-    // ============================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
-        authDomain: "aplikasi-chat-kngen.firebaseapp.com",
-        databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "aplikasi-chat-kngen",
-        storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
-        messagingSenderId: "858845228237",
-        appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84"
-    };
-
-    // ============================================================
-    //  APP STATE
-    // ============================================================
-    let db               = null;
-    let myUID            = null;
-    let myUsername       = null;
-    let myDisplayName    = null;
-    let myPrivateKey     = null;
-    let myPublicKeyB64   = null;
-
-    let activeChatId     = null;
-    let activePeerUID    = null;
+    let activeChatId = null;
+    let activePeerUID = null;
     let activePeerPubKey = null;
-    let activePeerName   = null;
-    let chatMsgListener  = null;
+    let activePeerName = null;
 
+    let chatMsgListener = null;
     let recentChats = {};
-    let recentChatsListener = null;
 
-    // ============================================================
-    //  CRYPTO (ECDH + AES-GCM)
-    // ============================================================
-    function ab2b64(buf) {
-        return btoa(String.fromCharCode(...new Uint8Array(buf)));
-    }
-    function b642ab(b64) {
-        const bin = atob(b64);
-        const buf = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-        return buf.buffer;
-    }
-    async function generateKeyPair() {
-        const kp = await crypto.subtle.generateKey(
-            { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']
-        );
-        const pubRaw = await crypto.subtle.exportKey('raw', kp.publicKey);
-        return { privateKey: kp.privateKey, publicKeyB64: ab2b64(pubRaw) };
-    }
-    async function deriveSharedKey(myPrivKey, theirPubKeyB64) {
-        const theirPubRaw = b642ab(theirPubKeyB64);
-        const theirPubKey = await crypto.subtle.importKey(
-            'raw', theirPubRaw, { name: 'ECDH', namedCurve: 'P-256' }, false, []
-        );
-        return crypto.subtle.deriveKey(
-            { name: 'ECDH', public: theirPubKey },
-            myPrivKey,
-            { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
-        );
-    }
-    async function encryptMessage(message, theirPubKeyB64) {
-        try {
-            const sharedKey = await deriveSharedKey(myPrivateKey, theirPubKeyB64);
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const encoded = new TextEncoder().encode(message);
-            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, sharedKey, encoded);
-            return { ciphertext: ab2b64(encrypted), iv: ab2b64(iv.buffer) };
-        } catch (e) { return null; }
-    }
-    async function decryptMessage(enc, senderPubKeyB64) {
-        try {
-            const sharedKey  = await deriveSharedKey(myPrivateKey, senderPubKeyB64);
-            const ciphertext = b642ab(enc.ciphertext);
-            const iv         = b642ab(enc.iv);
-            const decrypted  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sharedKey, ciphertext);
-            return new TextDecoder().decode(decrypted);
-        } catch (e) { return null; }
-    }
+    // DB Config untuk Kunci Privat (IndexedDB)
+    const IDB_NAME = 'SecureChatKeyStore';
+    const IDB_STORE = 'private_keys';
 
-    // Hash password with SHA-256, return hex string
-    async function hashPassword(password) {
-        const encoded = new TextEncoder().encode(password);
-        const hashBuf = await crypto.subtle.digest('SHA-256', encoded);
-        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
-    }
-
-    // Toggle show/hide password
-    function togglePw(inputId, btn) {
-        const input = document.getElementById(inputId);
-        const isHidden = input.type === 'password';
-        input.type = isHidden ? 'text' : 'password';
-        btn.querySelector('.eye-show').style.display = isHidden ? 'none' : '';
-        btn.querySelector('.eye-hide').style.display = isHidden ? '' : 'none';
-    }
-
-    // ============================================================
-    //  FIREBASE INIT
-    // ============================================================
     function initFirebase() {
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            db.ref('.info/connected').on('value', snap => {
-                const online = snap.val() === true;
-                const dot = document.getElementById('conn-dot');
-                const label = document.getElementById('conn-label');
-                if (dot) dot.className = 'conn-dot ' + (online ? 'online' : 'offline');
-                if (label) label.textContent = online ? 'Terhubung' : 'Terputus — Mencoba menghubungkan...';
-            });
-            return true;
-        } catch (err) {
-            showToast('❌ Firebase gagal: ' + err.message);
+        // SILAHKAN ISI DENGAN KONFIGURASI FIREBASE ANDA SENDIRI
+        const firebaseConfig = {
+            databaseURL: "https://PROYEK-ANDA-DEFAULT-RTDB.firebaseio.com/"
+        };
+        
+        if (!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("PROYEK-ANDA")) {
+            alert("⚠️ Konfigurasi Firebase DatabaseURL belum diisi dengan benar di dalam index.html!");
             return false;
         }
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        return true;
     }
 
     // ============================================================
-    //  SETUP: create or load user
+    //  INDEXEDDB MANAGER (UNTUK MENYIMPAN PRIVATE CRYPTOKEY)
+    // ============================================================
+    function openKeyDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(IDB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(IDB_STORE)) {
+                    db.createObjectStore(IDB_STORE);
+                }
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async function storePrivateKey(uid, keyObject) {
+        const idb = await openKeyDB();
+        return new Promise((resolve, reject) => {
+            const tx = idb.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            const request = store.put(keyObject, uid);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function getPrivateKey(uid) {
+        const idb = await openKeyDB();
+        return new Promise((resolve, reject) => {
+            const tx = idb.transaction(IDB_STORE, 'readonly');
+            const store = tx.objectStore(IDB_STORE);
+            const request = store.get(uid);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function deletePrivateKey(uid) {
+        const idb = await openKeyDB();
+        return new Promise((resolve, reject) => {
+            const tx = idb.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            const request = store.delete(uid);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // ============================================================
+    //  KRIPTOGRAFI: WEB CRYPTO API (ECDH + AES-GCM)
+    // ============================================================
+    async function generateKeyPair() {
+        return await window.crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            false, // Ubah ke true jika ingin mengekspor Kunci Privat, tapi di sini kita simpan langsung ke IndexedDB
+            ["deriveKey", "deriveBits"]
+        );
+    }
+
+    async function exportPublicKey(key) {
+        const exported = await window.crypto.subtle.exportKey("spki", key);
+        return b64Encode(exported);
+    }
+
+    async function importPublicKey(b64Str) {
+        const buf = b64Decode(b64Str);
+        return await window.crypto.subtle.importKey(
+            "spki", buf,
+            { name: "ECDH", namedCurve: "P-256" },
+            true, []
+        );
+    }
+
+    async function deriveSharedKey(privateKey, publicKey) {
+        return await window.crypto.subtle.deriveKey(
+            { name: "ECDH", public: publicKey },
+            privateKey,
+            { name: "AES-GCM", length: 256 },
+            true,
+            ["encrypt", "decrypt"]
+        );
+    }
+
+    async function encryptMessage(sharedKey, text) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const ciphertext = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            sharedKey,
+            data
+        );
+        return {
+            cipher: b64Encode(ciphertext),
+            iv: b64Encode(iv)
+        };
+    }
+
+    async function decryptMessage(sharedKey, cipherB64, ivB64) {
+        try {
+            const cipher = b64Decode(cipherB64);
+            const iv = b64Decode(ivB64);
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv },
+                sharedKey,
+                cipher
+            );
+            const decoder = new TextDecoder();
+            return decoder.decode(decrypted);
+        } catch (err) {
+            console.error("Gagal melakukan dekripsi komponen E2EE:", err);
+            return "⚠️ [Gagal memecahkan enkripsi pesan ini]";
+        }
+    }
+
+    function b64Encode(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+    function b64Decode(str) {
+        const binaryStr = atob(str);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) { bytes[i] = binaryStr.charCodeAt(i); }
+        return bytes.buffer;
+    }
+
+    // ============================================================
+    //  UI & NAVIGATION FLOW
+    // ============================================================
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${screenId}`).classList.add('active');
+    }
+
+    function switchSetupTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.setup-form').forEach(f => f.style.display = 'none');
+        if (tab === 'login') {
+            document.getElementById('tab-btn-login').classList.add('active');
+            document.getElementById('form-login').style.style.display = 'block';
+        } else {
+            document.getElementById('tab-btn-register').classList.add('active');
+            document.getElementById('form-register').style.style.display = 'block';
+        }
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('app-toast');
+        toast.innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight - 10) + 'px';
+    }
+
+    // ============================================================
+    //  AUTENTIKASI & INITIALIZATION USER
     // ============================================================
     async function loadOrSetupUser() {
-        myUID         = localStorage.getItem('sc_uid');
-        myUsername    = localStorage.getItem('sc_username');
-        myDisplayName = localStorage.getItem('sc_displayname');
-
-        if (myUID && myUsername) {
-            await initSession();
-            return;
-        }
-        showScreen('setup');
-    }
-
-    async function initSession() {
-        setLoading(true);
-        try {
-            const kp = await generateKeyPair();
-            myPrivateKey   = kp.privateKey;
-            myPublicKeyB64 = kp.publicKeyB64;
-
-            await db.ref(`users/${myUID}`).update({
-                username:    myUsername,
-                displayName: myDisplayName,
-                publicKey:   myPublicKeyB64,
-                lastSeen:    Date.now()
-            });
-
-            showScreen('home');
-            listenRecentChats();
-        } catch (err) {
-            showToast('❌ Gagal inisialisasi: ' + err.message);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    // ============================================================
-    //  SETUP FORM SUBMIT
-    // ============================================================
-    document.getElementById('setup-btn').addEventListener('click', async () => {
-        const displayName = document.getElementById('setup-displayname').value.trim();
-        const username    = document.getElementById('setup-username').value.trim().toLowerCase();
-        const password    = document.getElementById('setup-password').value;
-        const errEl       = document.getElementById('setup-username-error');
-        const pwErrEl     = document.getElementById('setup-password-error');
-
-        errEl.classList.remove('show');  errEl.textContent = '';
-        pwErrEl.classList.remove('show'); pwErrEl.textContent = '';
-
-        if (!displayName) { showToast('Masukkan nama tampilan'); return; }
-        if (!validateUsername(username)) {
-            errEl.textContent = 'Username: 3–30 karakter, huruf kecil, angka, underscore saja';
-            errEl.classList.add('show');
-            return;
-        }
-        if (password.length < 6) {
-            pwErrEl.textContent = '❌ Password minimal 6 karakter';
-            pwErrEl.classList.add('show');
-            return;
-        }
-
-        setLoading(true);
-        document.getElementById('setup-btn').disabled = true;
-        try {
-            const snap = await db.ref(`usernames/${username}`).get();
-            if (snap.exists()) {
-                errEl.textContent = '❌ Username sudah dipakai, coba yang lain';
-                errEl.classList.add('show');
-                return;
-            }
-
-            const uid = crypto.randomUUID();
-            const kp  = await generateKeyPair();
-            myPrivateKey   = kp.privateKey;
-            myPublicKeyB64 = kp.publicKeyB64;
-
-            const pwHash = await hashPassword(password);
-
-            await db.ref(`usernames/${username}`).set(uid);
-            await db.ref(`users/${uid}`).set({
-                username:    username,
-                displayName: displayName,
-                publicKey:   myPublicKeyB64,
-                passwordHash: pwHash,
-                createdAt:   Date.now(),
-                lastSeen:    Date.now()
-            });
-
-            localStorage.setItem('sc_uid', uid);
-            localStorage.setItem('sc_username', username);
-            localStorage.setItem('sc_displayname', displayName);
-            myUID         = uid;
-            myUsername    = username;
-            myDisplayName = displayName;
-
-            showScreen('home');
-            listenRecentChats();
-        } catch (err) {
-            showToast('❌ ' + err.message);
-        } finally {
-            setLoading(false);
-            document.getElementById('setup-btn').disabled = false;
-        }
-    });
-
-    ['setup-displayname', 'setup-username', 'setup-password'].forEach(id => {
-        document.getElementById(id).addEventListener('keypress', e => {
-            if (e.key === 'Enter') document.getElementById('setup-btn').click();
-        });
-    });
-
-    ['login-username', 'login-password'].forEach(id => {
-        document.getElementById(id).addEventListener('keypress', e => {
-            if (e.key === 'Enter') document.getElementById('login-btn').click();
-        });
-    });
-
-    // ============================================================
-    //  SETUP TAB SWITCHER
-    // ============================================================
-    function switchSetupTab(tab) {
-        const isRegister = tab === 'register';
-        document.getElementById('panel-register').style.display = isRegister ? '' : 'none';
-        document.getElementById('panel-login').style.display    = isRegister ? 'none' : '';
-        document.getElementById('tab-register').classList.toggle('active', isRegister);
-        document.getElementById('tab-login').classList.toggle('active', !isRegister);
-        // clear errors
-        document.getElementById('setup-username-error').classList.remove('show');
-        document.getElementById('login-error').classList.remove('show');
-    }
-
-    // ============================================================
-    //  LOGIN WITH EXISTING USERNAME
-    // ============================================================
-    document.getElementById('login-btn').addEventListener('click', async () => {
-        const username = document.getElementById('login-username').value.trim().toLowerCase();
-        const password = document.getElementById('login-password').value;
-        const errEl    = document.getElementById('login-error');
-        errEl.classList.remove('show');
-        errEl.textContent = '';
-
-        if (!validateUsername(username)) {
-            errEl.textContent = 'Username tidak valid';
-            errEl.classList.add('show');
-            return;
-        }
-        if (!password) {
-            errEl.textContent = '❌ Masukkan password';
-            errEl.classList.add('show');
-            return;
-        }
-
-        setLoading(true);
-        document.getElementById('login-btn').disabled = true;
-        try {
-            // 1. Lookup UID
-            const usernameSnap = await db.ref(`usernames/${username}`).get();
-            if (!usernameSnap.exists()) {
-                errEl.textContent = '❌ Username tidak ditemukan';
-                errEl.classList.add('show');
-                return;
-            }
-            const uid = usernameSnap.val();
-
-            // 2. Load user data
-            const userSnap = await db.ref(`users/${uid}`).get();
-            if (!userSnap.exists()) {
-                errEl.textContent = '❌ Data akun tidak ditemukan';
-                errEl.classList.add('show');
-                return;
-            }
-            const userData = userSnap.val();
-
-            // 3. Verify password
-            const pwHash = await hashPassword(password);
-            if (userData.passwordHash && userData.passwordHash !== pwHash) {
-                errEl.textContent = '❌ Password salah';
-                errEl.classList.add('show');
-                return;
-            }
-
-            // 4. Restore session
-            localStorage.setItem('sc_uid',         uid);
-            localStorage.setItem('sc_username',    username);
-            localStorage.setItem('sc_displayname', userData.displayName || username);
-            myUID         = uid;
-            myUsername    = username;
-            myDisplayName = userData.displayName || username;
-
-            await initSession();
-            showToast('✅ Berhasil masuk sebagai @' + username);
-        } catch (err) {
-            errEl.textContent = '❌ Gagal login: ' + err.message;
-            errEl.classList.add('show');
-        } finally {
-            setLoading(false);
-            document.getElementById('login-btn').disabled = false;
-        }
-    });
-
-    // ============================================================
-    //  RECENT CHATS LISTENER
-    // ============================================================
-    function listenRecentChats() {
-        if (!myUID || !db) return;
-        if (recentChatsListener) {
-            db.ref(`userChats/${myUID}`).off('value', recentChatsListener);
-        }
-        recentChatsListener = db.ref(`userChats/${myUID}`).orderByChild('lastTs').on('value', async snap => {
-            const data = snap.val() || {};
-            recentChats = data;
-            if (currentScreen === 'home') renderChatList();
-        });
-    }
-
-    async function renderChatList() {
-        const listEl  = document.getElementById('chat-list');
-        const emptyEl = document.getElementById('chat-list-empty');
-        const entries = Object.entries(recentChats).sort((a, b) => (b[1].lastTs || 0) - (a[1].lastTs || 0));
-
-        listEl.querySelectorAll('.chat-item').forEach(el => el.remove());
-
-        if (entries.length === 0) {
-            if (emptyEl) emptyEl.style.display = 'flex';
-            return;
-        }
-
-        if (emptyEl) emptyEl.style.display = 'none';
-        for (const [chatId, info] of entries) {
-            const item = document.createElement('div');
-            item.className = 'chat-item';
-            const initial = getInitial(info.peerDisplayName || info.peerUsername || '?');
-            const unread = info.unread > 0 ? `<div class="ci-badge">${info.unread}</div>` : '';
-            item.innerHTML = `
-                <div class="ci-avatar">${initial}</div>
-                <div class="ci-info">
-                    <div class="ci-name">${escapeHtml(info.peerDisplayName || info.peerUsername || 'Pengguna')}</div>
-                    <div class="ci-preview">${escapeHtml(info.lastMsg || '🔒 Pesan terenkripsi')}</div>
-                </div>
-                <div class="ci-meta">
-                    <div class="ci-time">${info.lastTs ? formatChatTime(info.lastTs) : ''}</div>
-                    ${unread}
-                </div>
-            `;
-            item.addEventListener('click', () => openChat(chatId, info.peerUID, info.peerDisplayName, info.peerUsername));
-            listEl.appendChild(item);
-        }
-    }
-
-    // ============================================================
-    //  SEARCH USERS
-    // ============================================================
-    let searchDebounce = null;
-    document.getElementById('search-input').addEventListener('input', e => {
-        clearTimeout(searchDebounce);
-        const q = e.target.value.trim().toLowerCase();
-        if (!q) {
-            setSearchHint('Ketik username untuk mencari pengguna SecureChat');
-            return;
-        }
-        setSearchStatus('Mencari...');
-        searchDebounce = setTimeout(() => searchUser(q), 400);
-    });
-
-    function setSearchHint(msg) {
-        document.getElementById('search-results').innerHTML = `
-            <div class="search-hint">
-                <div class="hint-glyph">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </div>
-                <p>${msg}</p>
-            </div>`;
-    }
-
-    function setSearchStatus(msg) {
-        // Update status text without touching the input or causing layout shift
-        let statusEl = document.getElementById('search-status-msg');
-        if (!statusEl) {
-            const resEl = document.getElementById('search-results');
-            resEl.innerHTML = `<div class="search-hint"><div class="hint-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><p id="search-status-msg"></p></div>`;
-            statusEl = document.getElementById('search-status-msg');
-        }
-        statusEl.textContent = msg;
-    }
-
-    async function searchUser(query) {
-        const resEl = document.getElementById('search-results');
-        // Guard: if input value changed before debounce fired, skip
-        const currentVal = document.getElementById('search-input').value.trim().toLowerCase();
-        if (currentVal !== query) return;
-
-        try {
-            const snap = await db.ref(`usernames/${query}`).get();
-            if (!snap.exists()) {
-                resEl.innerHTML = `<div class="search-hint">
-                    <div class="hint-glyph">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </div>
-                    <p>Pengguna "<strong>${escapeHtml(query)}</strong>" tidak ditemukan.</p></div>`;
-                return;
-            }
-            const peerUID = snap.val();
-            if (peerUID === myUID) {
-                resEl.innerHTML = `<div class="search-hint"><div class="hint-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><p>Itu Anda sendiri!</p></div>`;
-                return;
-            }
-            const userSnap = await db.ref(`users/${peerUID}`).get();
-            if (!userSnap.exists()) {
-                resEl.innerHTML = `<div class="search-hint"><p>Data pengguna tidak ditemukan.</p></div>`;
-                return;
-            }
-            const user = userSnap.val();
-            resEl.innerHTML = '';
-            const item = document.createElement('div');
-            item.className = 'search-result-item';
-            item.innerHTML = `
-                <div class="sr-avatar">${getInitial(user.displayName || user.username)}</div>
-                <div class="sr-info">
-                    <div class="sr-name">${escapeHtml(user.displayName || user.username)}</div>
-                    <div class="sr-username">@${escapeHtml(user.username)}</div>
-                </div>
-                <button class="sr-action">Chat</button>
-            `;
-            item.querySelector('.sr-action').addEventListener('click', () => {
-                const chatId = [myUID, peerUID].sort().join('_');
-                openChat(chatId, peerUID, user.displayName, user.username);
-            });
-            resEl.appendChild(item);
-        } catch (err) {
-            resEl.innerHTML = `<div class="search-hint"><p>Gagal mencari: ${escapeHtml(err.message)}</p></div>`;
-        }
-    }
-
-    // ============================================================
-    //  OPEN CHAT
-    // ============================================================
-    async function openChat(chatId, peerUID, peerDisplayName, peerUsername) {
-        activeChatId     = chatId;
-        activePeerUID    = peerUID;
-        activePeerName   = peerDisplayName || peerUsername || 'Pengguna';
-        activePeerPubKey = null;
-
-        document.getElementById('chat-peer-name').textContent = activePeerName;
-        document.getElementById('chat-peer-status').textContent = '@' + (peerUsername || '...');
-        document.getElementById('chat-peer-avatar').textContent = getInitial(activePeerName);
-        document.getElementById('message-input').disabled = true;
-        document.getElementById('send-btn').disabled = true;
-
-        const messagesEl = document.getElementById('chat-messages');
-        messagesEl.innerHTML = `
-            <div class="chat-empty" id="chat-empty">
-                <div class="lock-wrap">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <p>Pesan terenkripsi end-to-end. Hanya Anda dan penerima yang bisa membacanya.</p>
-            </div>`;
-
-        showScreen('chat');
-
-        try {
-            const peerSnap = await db.ref(`users/${peerUID}`).get();
-            if (!peerSnap.exists()) { showToast('❌ Pengguna tidak ditemukan'); return; }
-            const peerData = peerSnap.val();
-            activePeerPubKey = peerData.publicKey;
-
-            document.getElementById('message-input').disabled = false;
-            document.getElementById('send-btn').disabled = false;
-            document.getElementById('message-input').placeholder = `Pesan ke ${activePeerName}...`;
-
-            if (recentChats[chatId]) {
-                await db.ref(`userChats/${myUID}/${chatId}/unread`).set(0);
-            }
-
-            subscribeChatMessages(chatId, peerUID, activePeerPubKey);
-        } catch (err) {
-            showToast('❌ Gagal memuat chat: ' + err.message);
-        }
-    }
-
-    function subscribeChatMessages(chatId, peerUID, peerPubKey) {
-        if (chatMsgListener) {
-            db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
-        }
-        chatMsgListener = db.ref(`chats/${chatId}/messages`).orderByChild('timestamp').on('child_added', async snap => {
-            const data = snap.val();
-            if (!data) return;
-            const isOwn = (data.senderId === myUID);
-            let text = '[🔒 tidak dapat didekripsi]';
-            const decrypted = await decryptMessage({ ciphertext: data.ciphertext, iv: data.iv }, peerPubKey).catch(() => null);
-            text = decrypted || (isOwn ? '[🔒]' : '[🔒 tidak dapat didekripsi]');
-            appendMessage(isOwn ? myDisplayName : activePeerName, text, isOwn, new Date(data.timestamp));
-        });
-    }
-
-    // ============================================================
-    //  SEND MESSAGE
-    // ============================================================
-    async function sendMessage() {
-        const input = document.getElementById('message-input');
-        const msg   = input.value.trim();
-        if (!msg || !activePeerPubKey || !activeChatId) return;
-
-        const sendBtn = document.getElementById('send-btn');
-        sendBtn.disabled = true;
-        try {
-            const encrypted = await encryptMessage(msg, activePeerPubKey);
-            if (!encrypted) throw new Error('Enkripsi gagal');
-
-            const msgData = {
-                senderId:   myUID,
-                senderName: myDisplayName,
-                ciphertext: encrypted.ciphertext,
-                iv:         encrypted.iv,
-                timestamp:  Date.now()
-            };
-
-            await db.ref(`chats/${activeChatId}/messages`).push(msgData);
-
-            const peerSnap = await db.ref(`users/${activePeerUID}`).get();
-            const peerData = peerSnap.val() || {};
-
-            const chatMeta = {
-                peerUID:         activePeerUID,
-                peerDisplayName: activePeerName,
-                peerUsername:    peerData.username || '',
-                lastMsg:         msg.substring(0, 60),
-                lastTs:          Date.now(),
-                unread:          0
-            };
-            await db.ref(`userChats/${myUID}/${activeChatId}`).set(chatMeta);
-
-            const peerChatMeta = {
-                peerUID:         myUID,
-                peerDisplayName: myDisplayName,
-                peerUsername:    myUsername,
-                lastMsg:         msg.substring(0, 60),
-                lastTs:          Date.now(),
-                unread:          firebase.database.ServerValue.increment(1)
-            };
-            await db.ref(`userChats/${activePeerUID}/${activeChatId}`).transaction(current => {
-                if (current === null) return { ...peerChatMeta, unread: 1 };
-                return { ...peerChatMeta, unread: (current.unread || 0) + 1 };
-            });
-
-            input.value = '';
-            autoResize(input);
-            input.focus();
-        } catch (err) {
-            showToast('❌ Gagal kirim: ' + err.message);
-        } finally {
-            sendBtn.disabled = false;
-        }
-    }
-
-    // ============================================================
-    //  APPEND MESSAGE TO UI
-    // ============================================================
-    function appendMessage(senderName, text, isOwn, timestamp) {
-        const messagesEl = document.getElementById('chat-messages');
-        const emptyEl = document.getElementById('chat-empty');
-        if (emptyEl) emptyEl.remove();
-
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
-        msgDiv.innerHTML = `
-            <div class="bubble">${escapeHtml(text)}</div>
-            <div class="meta">${isOwn ? 'Anda' : escapeHtml(senderName)} • ${formatTime(timestamp)}</div>
-        `;
-        messagesEl.appendChild(msgDiv);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    // ============================================================
-    //  PROFILE: render & save
-    // ============================================================
-    function renderProfile() {
-        if (!myUID) return;
-        const initial = getInitial(myDisplayName);
-        document.getElementById('profile-avatar-big').textContent = initial;
-        document.getElementById('profile-display-hero').textContent = myDisplayName || '-';
-        document.getElementById('profile-username-hero').textContent = '@' + (myUsername || '-');
-        document.getElementById('profile-uid-badge').textContent = 'UID: ' + myUID.substring(0, 18) + '…';
-        document.getElementById('profile-displayname-input').value = myDisplayName || '';
-        document.getElementById('profile-username-input').value = myUsername || '';
-    }
-
-    document.getElementById('profile-save-btn').addEventListener('click', async () => {
-        const newDisplay  = document.getElementById('profile-displayname-input').value.trim();
-        const newUsername = document.getElementById('profile-username-input').value.trim().toLowerCase();
-        const errEl = document.getElementById('profile-error');
-        errEl.style.display = 'none';
-        errEl.classList.remove('show');
-
-        if (!newDisplay) { showToast('Nama tampilan tidak boleh kosong'); return; }
-        if (!validateUsername(newUsername)) {
-            errEl.textContent = 'Username: 3–30 karakter, huruf kecil, angka, underscore saja';
-            errEl.style.display = 'block';
-            errEl.classList.add('show');
-            return;
-        }
-
-        const saveBtn = document.getElementById('profile-save-btn');
-        saveBtn.disabled = true;
-        setLoading(true);
-        try {
-            if (newUsername !== myUsername) {
-                const snap = await db.ref(`usernames/${newUsername}`).get();
-                if (snap.exists() && snap.val() !== myUID) {
-                    errEl.textContent = '❌ Username sudah dipakai';
-                    errEl.style.display = 'block';
-                    errEl.classList.add('show');
+        const savedUID = localStorage.getItem('chat_my_uid');
+        const savedName = localStorage.getItem('chat_my_name');
+        
+        if (savedUID && savedName) {
+            const storedPrivKey = await getPrivateKey(savedUID);
+            if (storedPrivKey) {
+                myUID = savedUID;
+                myName = savedName;
+                myPrivateKey = storedPrivKey;
+                
+                // Ambil data kunci publik dari Firebase untuk memvalidasi sinkronisasi
+                const snapshot = await db.ref(`users/${myUID}`).once('value');
+                if (snapshot.exists()) {
+                    myPublicKeyB64 = snapshot.val().publicKey;
+                    startAppSession();
                     return;
                 }
-                await db.ref(`usernames/${myUsername}`).remove();
-                await db.ref(`usernames/${newUsername}`).set(myUID);
             }
+        }
+        showScreen('setup');
+    }
 
-            await db.ref(`users/${myUID}`).update({
-                displayName: newDisplay,
-                username:    newUsername
+    async function handleRegister() {
+        const nameInput = document.getElementById('reg-name').value.trim();
+        if (!nameInput) return showToast('Nama Pengguna tidak boleh kosong!');
+
+        try {
+            showToast('🔄 Membuat Keypair Kriptografi Baru...');
+            const newUID = 'sc-' + Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11);
+            const keyPair = await generateKeyPair();
+            const pubKeyB64 = await exportPublicKey(keyPair.publicKey);
+
+            // Simpan kunci privat di database lokal browser (IndexedDB)
+            await storePrivateKey(newUID, keyPair.privateKey);
+
+            // Kirim data profil dan kunci publik ke database Firebase
+            await db.ref(`users/${newUID}`).set({
+                uid: newUID,
+                name: nameInput,
+                publicKey: pubKeyB64,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
             });
 
-            localStorage.setItem('sc_displayname', newDisplay);
-            localStorage.setItem('sc_username', newUsername);
-            myDisplayName = newDisplay;
-            myUsername    = newUsername;
+            localStorage.setItem('chat_my_uid', newUID);
+            localStorage.setItem('chat_my_name', nameInput);
 
-            renderProfile();
-            showToast('✅ Profil berhasil disimpan');
+            myUID = newUID;
+            myName = nameInput;
+            myPrivateKey = keyPair.privateKey;
+            myPublicKeyB64 = pubKeyB64;
+
+            showToast('✅ Pendaftaran Akun Berhasil!');
+            startAppSession();
         } catch (err) {
-            showToast('❌ ' + err.message);
-        } finally {
-            saveBtn.disabled = false;
-            setLoading(false);
+            console.error(err);
+            showToast('❌ Registrasi Gagal, silakan coba kembali.');
         }
-    });
+    }
 
-    // ============================================================
-    //  NAVIGATION BINDINGS
-    // ============================================================
-    document.getElementById('btn-go-search').addEventListener('click', () => showScreen('search'));
-    document.getElementById('btn-go-profile').addEventListener('click', () => showScreen('profile'));
+    async function handleLogin() {
+        const uidInput = document.getElementById('login-uid').value.trim();
+        if (!uidInput) return showToast('User ID (UID) wajib diisi!');
 
-    // ============================================================
-    //  LOGOUT
-    // ============================================================
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        if (!confirm('Keluar dari akun? Anda bisa masuk lagi dengan username yang sama.')) return;
+        try {
+            showToast('🔄 Memverifikasi UID...');
+            const snapshot = await db.ref(`users/${uidInput}`).once('value');
+            if (!snapshot.exists()) return showToast('❌ Akun UID tidak ditemukan di server.');
 
-        // Stop all listeners
-        if (recentChatsListener) {
-            db.ref(`userChats/${myUID}`).off('value', recentChatsListener);
-            recentChatsListener = null;
+            // Cari kunci privat pendamping di IndexedDB perangkat ini
+            const localPrivKey = await getPrivateKey(uidInput);
+            if (!localPrivKey) {
+                return showToast('❌ Kunci Privat perangkat untuk akun ini tidak ditemukan di sini!');
+            }
+
+            const userData = snapshot.val();
+            localStorage.setItem('chat_my_uid', userData.uid);
+            localStorage.setItem('chat_my_name', userData.name);
+
+            myUID = userData.uid;
+            myName = userData.name;
+            myPrivateKey = localPrivKey;
+            myPublicKeyB64 = userData.publicKey;
+
+            showToast('✅ Berhasil Masuk Kembali!');
+            startAppSession();
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Login Gagal.');
         }
+    }
+
+    function startAppSession() {
+        document.getElementById('my-profile-name').innerText = myName;
+        document.getElementById('my-uid-display').innerText = myUID;
+        document.getElementById('my-avatar-char').innerText = myName.charAt(0).toUpperCase();
+        
+        listenRecentChats();
+        showScreen('home');
+    }
+
+    // ============================================================
+    //  MANAJEMEN PERCAKAPAN & FIREBASE LISTENERS
+    // ============================================================
+    function listenRecentChats() {
+        db.ref(`userChats/${myUID}`).on('value', async (snapshot) => {
+            const container = document.getElementById('chat-list-container');
+            if (!snapshot.exists()) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span>💬</span>
+                        <h3>Belum ada obrolan</h3>
+                        <p>Klik ikon chat di atas untuk mulai bertukar pesan.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            const items = [];
+            
+            snapshot.forEach((child) => {
+                items.push({ id: child.key, ...child.val() });
+            });
+
+            // Urutkan percakapan dari yang paling baru diperbarui
+            items.sort((a, b) => b.timestamp - a.timestamp);
+
+            for (let chat of items) {
+                const div = document.createElement('div');
+                div.className = 'chat-list-item';
+                div.onclick = () => openChat(chat.id, chat.peerUID, chat.peerName, chat.peerPubKey);
+
+                const timeStr = chat.timestamp ? new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                const unreadBadge = chat.unread && chat.unread > 0 ? `<span class="badge">${chat.unread}</span>` : '';
+
+                div.innerHTML = `
+                    <div class="avatar">${chat.peerName.charAt(0).toUpperCase()}</div>
+                    <div class="chat-info">
+                        <div class="chat-meta">
+                            <span class="chat-name">${chat.peerName}</span>
+                            <span class="chat-time">${timeStr}</span>
+                        </div>
+                        <div class="chat-meta">
+                            <span class="chat-preview">${chat.lastMsg || '🔒 Pesan Terenkripsi'}</span>
+                            ${unreadBadge}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        });
+    }
+
+    async function startNewChat() {
+        const targetUID = document.getElementById('peer-uid-input').value.trim();
+        if (!targetUID) return showToast('Masukkan UID target terlebih dahulu!');
+        if (targetUID === myUID) return showToast('Tidak bisa chat dengan UID diri sendiri!');
+
+        try {
+            showToast('🔄 Mencari profil teman...');
+            const snapshot = await db.ref(`users/${targetUID}`).once('value');
+            if (!snapshot.exists()) return showToast('❌ UID tidak ditemukan.');
+
+            const peer = snapshot.val();
+            const newChatId = myUID < peer.uid ? `${myUID}_${peer.uid}` : `${peer.uid}_${myUID}`;
+            
+            // Bersihkan input sebelum bergeser layar
+            document.getElementById('peer-uid-input').value = '';
+            openChat(newChatId, peer.uid, peer.name, peer.publicKey);
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Terjadi kegagalan pencarian.');
+        }
+    }
+
+    async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
+        // Hapus listener aktif dari ruang chat sebelumnya jika ada
         if (chatMsgListener && activeChatId) {
             db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
-            chatMsgListener = null;
         }
 
-        // Clear local session
-        localStorage.removeItem('sc_uid');
-        localStorage.removeItem('sc_username');
-        localStorage.removeItem('sc_displayname');
+        activeChatId = chatId;
+        activePeerUID = peerUID;
+        activePeerName = peerName;
+        
+        document.getElementById('chat-room-title').innerText = peerName;
+        document.getElementById('chat-messages-container').innerHTML = '';
+        showScreen('chat-room');
 
-        // Reset state
-        myUID = null; myUsername = null; myDisplayName = null;
-        myPrivateKey = null; myPublicKeyB64 = null;
-        activeChatId = null; activePeerUID = null;
-        activePeerPubKey = null; activePeerName = null;
-        recentChats = {};
+        try {
+            const importedPeerPubKey = await importPublicKey(peerPubKeyB64);
+            activePeerPubKey = await deriveSharedKey(myPrivateKey, importedPeerPubKey);
 
-        // Back to setup screen, show login tab
-        switchSetupTab('login');
-        showScreen('setup');
-        showToast('✅ Berhasil keluar dari akun');
+            // Tandai unread menjadi 0 karena room chat telah dibuka
+            db.ref(`userChats/${myUID}/${activeChatId}/unread`).set(0);
+
+            // Mulai dengarkan aliran pesan baru pada room chat ini
+            chatMsgListener = db.ref(`chats/${activeChatId}/messages`).on('child_added', async (snapshot) => {
+                const msgData = snapshot.val();
+                let plainText = "🔒 Pesan Terenkripsi";
+                
+                if (msgData.cipher && msgData.iv) {
+                    plainText = await decryptMessage(activePeerPubKey, msgData.cipher, msgData.iv);
+                } else if (msgData.text) {
+                    plainText = msgData.text; // Penanganan fallback jika teks biasa
+                }
+
+                renderMessageBubble(plainText, msgData.sender, msgData.timestamp);
+                
+                // Reset counter unread saat ada pesan masuk dan user sedang di dalam room
+                if (activeChatId === chatId) {
+                    db.ref(`userChats/${myUID}/${activeChatId}/unread`).set(0);
+                }
+            });
+
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Gagal menyiapkan kunci enkripsi E2EE.');
+        }
+    }
+
+    function renderMessageBubble(text, senderUID, timestamp) {
+        const container = document.getElementById('chat-messages-container');
+        const isMe = senderUID === myUID;
+        
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${isMe ? 'sent' : 'received'}`;
+        
+        const timeStr = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        bubble.innerHTML = `
+            ${escapeHTML(text)}
+            <span class="msg-time">${timeStr}</span>
+        `;
+        
+        container.appendChild(bubble);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const inputEl = document.getElementById('message-input');
+        const text = inputEl.value.trim();
+        if (!text || !activeChatId || !activePeerPubKey) return;
+
+        inputEl.value = '';
+        autoResize(inputEl);
+
+        try {
+            // Proses Enkripsi E2EE di Sisi Klien
+            const encData = await encryptMessage(activePeerPubKey, text);
+            const now = firebase.database.ServerValue.TIMESTAMP;
+
+            const newMsgRef = db.ref(`chats/${activeChatId}/messages`).push();
+            await newMsgRef.set({
+                sender: myUID,
+                cipher: encData.cipher,
+                iv: encData.iv,
+                timestamp: now
+            });
+
+            // Update Metadata untuk Daftar Obrolan (Teks Asli Disembunyikan di E2EE)
+            const updates = {};
+            updates[`userChats/${myUID}/${activeChatId}`] = {
+                lastMsg: "🔒 Pesan Terenkripsi",
+                timestamp: now,
+                peerUID: activePeerUID,
+                peerName: activePeerName,
+                peerPubKey: await exportPublicKey(await importPublicKey(myPublicKeyB64)) // Tetap simpan string pubkey awal
+            };
+            
+            // Simpan data preview dan naikkan hitungan unread bagi penerima
+            db.ref(`userChats/${activePeerUID}/${activeChatId}`).once('value', (snap) => {
+                let currentUnread = 0;
+                if (snap.exists() && snap.val().unread) {
+                    currentUnread = snap.val().unread;
+                }
+                
+                db.ref(`userChats/${activePeerUID}/${activeChatId}`).set({
+                    lastMsg: "🔒 Pesan Terenkripsi",
+                    timestamp: now,
+                    peerUID: myUID,
+                    peerName: myName,
+                    peerPubKey: myPublicKeyB64,
+                    unread: currentUnread + 1
+                });
+            });
+
+            db.ref(`userChats/${myUID}/${activeChatId}`).update({
+                lastMsg: "🔒 Pesan Terenkripsi",
+                timestamp: now,
+                peerUID: activePeerUID,
+                peerName: activePeerName,
+                peerPubKey: db.ref(`users/${activePeerUID}`).once('value').then(s => s.val().publicKey)
+            });
+
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Gagal mengirim pesan aman.');
+        }
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    // ============================================================
+    //  DOM EVENTS BINDINGS
+    // ============================================================
+    document.getElementById('tab-btn-login').addEventListener('click', () => switchSetupTab('login'));
+    document.getElementById('tab-btn-register').addEventListener('click', () => switchSetupTab('register'));
+    document.getElementById('login-submit').addEventListener('click', handleLogin);
+    document.getElementById('register-submit').addEventListener('click', handleRegister);
+    
+    document.getElementById('home-add-btn').addEventListener('click', () => showScreen('add-chat'));
+    document.getElementById('home-profile-btn').addEventListener('click', () => showScreen('profile'));
+    document.getElementById('add-back-btn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('profile-back-btn').addEventListener('click', () => showScreen('home'));
+    
+    document.getElementById('start-chat-submit').addEventListener('click', startNewChat);
+
+    document.getElementById('copy-uid-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(myUID).then(() => showToast('📋 UID Berhasil disalin!'));
     });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+        if (confirm("Apakah Anda yakin ingin keluar dari akun ini? Kunci privat pada perangkat ini akan dihapus.")) {
+            try {
+                // Bersihkan Listener Aktif di Firebase
+                db.ref(`userChats/${myUID}`).off();
+                if (chatMsgListener && activeChatId) {
+                    db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
+                }
+
+                // Hapus Kunci Kriptografi Lokal
+                await deletePrivateKey(myUID);
+                localStorage.clear();
+
+                // Reset Global State
+                myUID = null; myName = null; myPrivateKey = null; myPublicKeyB64 = null;
+                activeChatId = null; activePeerUID = null; activePeerPubKey = null; activePeerName = null;
+                chatMsgListener = null; recentChats = {};
+
+                switchSetupTab('login');
+                showScreen('setup');
+                showToast('✅ Berhasil keluar dari akun');
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Gagal membersihkan sesi.');
+            }
+        }
+    });
+
     document.getElementById('chat-back-btn').addEventListener('click', () => {
         if (chatMsgListener && activeChatId) {
             db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
@@ -2100,18 +795,22 @@
         showScreen('home');
     });
 
-    document.getElementById('send-btn').addEventListener('click', sendMessage);
-    document.getElementById('message-input').addEventListener('input', function() { autoResize(this); });
-    document.getElementById('message-input').addEventListener('keypress', e => {
+    const msgInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    
+    msgInput.addEventListener('input', function() { 
+        autoResize(this);
+        sendBtn.disabled = this.value.trim() === '';
+    });
+    
+    msgInput.addEventListener('keypress', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (!document.getElementById('send-btn').disabled) sendMessage();
+            if (!sendBtn.disabled) sendMessage();
         }
     });
 
-    // ============================================================
-    //  BOOTSTRAP
-    // ============================================================
+    // RUNTIME INIT BOOTSTRAP
     document.addEventListener('DOMContentLoaded', async () => {
         if (!initFirebase()) return;
         await loadOrSetupUser();
