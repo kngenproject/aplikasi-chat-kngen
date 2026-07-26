@@ -35,13 +35,14 @@ body {
     background: rgba(0,0,0,0.9) !important;
     backdrop-filter: blur(20px) !important;
     border-bottom: 0.5px solid var(--border) !important;
-    padding: 6px 14px !important;
-    min-height: 46px !important;
+    padding: 4px 12px !important;
+    min-height: 36px !important;
+    height: 36px !important;
 }
 .header-title {
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     font-weight: 700 !important;
-    gap: 6px !important;
+    gap: 5px !important;
 }
 .header-title .badge {
     background: var(--accent) !important;
@@ -51,10 +52,10 @@ body {
 }
 .icon-btn {
     color: var(--accent) !important;
-    font-size: 1.15rem !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
-    padding: 4px !important;
+    font-size: 1rem !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    padding: 2px !important;
 }
 .icon-btn:hover { background: transparent !important; opacity: 0.6; }
 
