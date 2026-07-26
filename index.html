@@ -118,6 +118,131 @@
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 2rem; gap: 0.5rem; }
     </style>
+
+    
+
+
+    <style id="absolute-mobile-fix">
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            background-color: #0b0e14;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #121824;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #121824;
+        }
+
+        .screen.active {
+            display: flex !important;
+        }
+
+        /* KHUSUS CHAT ROOM: Paksa Struktur Fleksibel Penuh */
+        #screen-chat-room.active {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            overflow: hidden !important;
+        }
+
+        .app-header {
+            flex: 0 0 60px;
+            background-color: #1a2332;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border-bottom: 1px solid #2a364f;
+            z-index: 10;
+        }
+
+        .chat-messages {
+            flex: 1 1 auto !important;
+            background-color: #0f141d;
+            padding: 16px;
+            overflow-y: auto !important;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-input-area {
+            flex: 0 0 auto !important;
+            background-color: #1a2332;
+            padding: 10px 14px;
+            border-top: 1px solid #2a364f;
+            display: flex !important;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .chat-textarea {
+            flex: 1;
+            background-color: #0f141d;
+            border: 1px solid #2a364f;
+            border-radius: 20px;
+            padding: 10px 16px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .send-btn:disabled {
+            background-color: #2a364f;
+            color: #4b5563;
+            cursor: not-allowed;
+        }
+    </style>
+
 </head>
 <body>
 
@@ -204,19 +329,28 @@
             </div>
         </div>
 
+        
+        <!-- CHAT ROOM SCREEN -->
+        
         <!-- CHAT ROOM SCREEN -->
         <div id="screen-chat-room" class="screen">
             <div class="app-header">
                 <button id="chat-back-btn" class="icon-btn" onclick="showScreen('home')">⬅️</button>
-                <div style="flex: 1; margin-left: 0.75rem; min-width: 0;">
-                    <div id="chat-room-title" style="font-weight: 600;">Nama Teman</div>
-                    <div style="font-size: 0.7rem; color: var(--success); font-family: var(--font-mono);">🔒 E2EE Active</div>
+                <div class="header-info">
+                    <div id="chat-room-title" class="header-title">Nama Teman</div>
+                    <div id="chat-e2ee-status" class="header-status" style="color: #10b981;">🔒 E2EE Active</div>
                 </div>
             </div>
-            <div class="chat-messages" id="chat-messages-container"></div>
+            
+            <div class="chat-messages" id="chat-messages-container">
+                <div style="text-align: center; color: #607090; margin-top: 40px; font-size: 0.85rem;">
+                    💬 Mulai percakapan aman terenkripsi...
+                </div>
+            </div>
+
             <div class="chat-input-area">
-                <textarea id="message-input" class="chat-textarea" rows="1" placeholder="Ketik pesan aman..."></textarea>
-                <button id="send-btn" class="btn" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;" disabled onclick="sendMessage()">➡️</button>
+                <textarea id="message-input" class="chat-textarea" rows="1" placeholder="Ketik pesan..." oninput="document.getElementById('send-btn').disabled = this.value.trim() === ''"></textarea>
+                <button id="send-btn" class="send-btn" disabled onclick="sendMessage()">➡️</button>
             </div>
         </div>
 
@@ -752,26 +886,7 @@
 
 
 
-    async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
-        if (chatMsgListener && activeChatId) db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
-        activeChatId = chatId; activePeerUID = peerUID; activePeerName = peerName;
-        document.getElementById('chat-room-title').innerText = peerName;
-        document.getElementById('chat-messages-container').innerHTML = '';
-        showScreen('chat-room');
-
-        try {
-            const importedPeerPubKey = await importPublicKey(peerPubKeyB64);
-            activePeerPubKey = await deriveSharedKey(myPrivateKey, importedPeerPubKey);
-            chatMsgListener = db.ref(`chats/${activeChatId}/messages`).on('child_added', async (snapshot) => {
-                const msgData = snapshot.val();
-                let plainText = "🔒 Pesan Terenkripsi";
-                if (msgData.cipher && msgData.iv) plainText = await decryptMessage(activePeerPubKey, msgData.cipher, msgData.iv);
-                renderMessageBubble(plainText, msgData.sender, msgData.timestamp);
-            });
-        } catch (err) {
-            showToast('❌ Gagal kunci E2EE.');
-        }
-    }
+    
 
     function renderMessageBubble(text, senderUID, timestamp) {
         const container = document.getElementById('chat-messages-container');
@@ -785,27 +900,95 @@
 
     
     
+    
+    let activePeerPubKeyB64 = null;
+
+    
+    
+    
+
+
+
+    
+    async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
+        if (chatMsgListener && activeChatId) {
+            try { db.ref('chats/' + activeChatId + '/messages').off('child_added', chatMsgListener); } catch(e){}
+        }
+
+        activeChatId = chatId; 
+        activePeerUID = peerUID; 
+        activePeerName = peerName;
+        activePeerPubKey = null;
+
+        document.getElementById('chat-room-title').innerText = peerName;
+        document.getElementById('chat-messages-container').innerHTML = '';
+        
+        // Tampilkan layar obrolan DULUAN agar UI & kolom input selalu muncul
+        showScreen('chat-room');
+
+        const statusEl = document.getElementById('chat-e2ee-status');
+
+        try {
+            let targetPubKeyB64 = peerPubKeyB64;
+            if (!targetPubKeyB64) {
+                const snap = await db.ref('users/' + peerUID).once('value');
+                if (snap.exists()) {
+                    targetPubKeyB64 = snap.val().publicKey;
+                }
+            }
+
+            if (targetPubKeyB64 && myPrivateKey) {
+                activePeerPubKeyB64 = targetPubKeyB64;
+                const importedPeerPubKey = await importPublicKey(targetPubKeyB64);
+                activePeerPubKey = await deriveSharedKey(myPrivateKey, importedPeerPubKey);
+                if (statusEl) { statusEl.innerText = "🔒 E2EE Active"; statusEl.style.color = "var(--success)"; }
+            } else {
+                if (statusEl) { statusEl.innerText = "⚠️ Non-E2EE (Kunci lawan belum siap)"; statusEl.style.color = "var(--danger)"; }
+            }
+        } catch (err) {
+            console.error("E2EE Derivation Error:", err);
+            if (statusEl) { statusEl.innerText = "⚠️ Non-E2EE (Format Kunci Salah)"; statusEl.style.color = "var(--danger)"; }
+        }
+
+        // Pasang pendengar pesan realtime
+        chatMsgListener = db.ref('chats/' + activeChatId + '/messages').on('child_added', async (snapshot) => {
+            const msgData = snapshot.val();
+            let plainText = msgData.text || "🔒 Pesan Terenkripsi";
+            
+            if (msgData.cipher && msgData.iv) {
+                if (activePeerPubKey) {
+                    plainText = await decryptMessage(activePeerPubKey, msgData.cipher, msgData.iv);
+                } else {
+                    plainText = "⚠️ [Gagal Dekripsi: Kunci Tidak Cocok]";
+                }
+            }
+            renderMessageBubble(plainText, msgData.sender, msgData.timestamp);
+        });
+    }
+
     async function sendMessage() {
         const inputEl = document.getElementById('message-input');
         const text = inputEl.value.trim();
-        if (!text || !activeChatId || !activePeerPubKey) return;
+        if (!text || !activeChatId) return;
         inputEl.value = '';
+        document.getElementById('send-btn').disabled = true;
 
         try {
-            const encData = await encryptMessage(activePeerPubKey, text);
             const now = firebase.database.ServerValue.TIMESTAMP;
-            
-            // 1. Simpan pesan terenkripsi ke node chats
-            await db.ref('chats/' + activeChatId + '/messages').push().set({ 
-                sender: myUID, 
-                cipher: encData.cipher, 
-                iv: encData.iv, 
-                timestamp: now 
-            });
-            
-            // 2. Update preview obrolan di daftar chat saya & lawan bicara
-            const myChatMeta = { lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: activePeerUID, peerName: activePeerName, peerPubKey: activePeerPubKeyB64 || '' };
-            const peerChatMeta = { lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: myUID, peerName: myName, peerPubKey: myPublicKeyB64 || '' };
+            let payload = { sender: myUID, timestamp: now };
+
+            if (activePeerPubKey) {
+                const encData = await encryptMessage(activePeerPubKey, text);
+                payload.cipher = encData.cipher;
+                payload.iv = encData.iv;
+            } else {
+                payload.text = text; // Fallback jika lawan belum punya kunci E2EE sah
+            }
+
+            await db.ref('chats/' + activeChatId + '/messages').push().set(payload);
+
+            const myChatMeta = { lastMsg: text, timestamp: now, peerUID: activePeerUID, peerName: activePeerName, peerPubKey: activePeerPubKeyB64 || '' };
+            const peerChatMeta = { lastMsg: text, timestamp: now, peerUID: myUID, peerName: myName, peerPubKey: myPublicKeyB64 || '' };
 
             await db.ref('userChats/' + myUID + '/' + activeChatId).update(myChatMeta);
             await db.ref('userChats/' + activePeerUID + '/' + activeChatId).update(peerChatMeta);
@@ -815,6 +998,8 @@
             showToast('❌ Gagal mengirim pesan.');
         }
     }
+
+
 
 
 
