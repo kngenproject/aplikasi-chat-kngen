@@ -175,3 +175,30 @@ body {
     display: flex !important;
     align-items: center !important;
 }
+
+/* Search bar */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2) !important;
+    margin: 8px 14px;
+    padding: 8px 14px;
+    border-radius: 14px;
+}
+.search-bar .search-icon {
+    font-size: 0.9rem;
+    opacity: 0.6;
+}
+.search-bar input {
+    flex: 1;
+    background: transparent !important;
+    border: none !important;
+    outline: none;
+    color: var(--text) !important;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+.search-bar input::placeholder {
+    color: var(--textDim) !important;
+}
