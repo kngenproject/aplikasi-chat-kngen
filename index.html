@@ -156,6 +156,18 @@
         .chat-header .peer-status { font-size: 0.72rem !important; color: var(--textDim) !important; }
         .messages { scroll-behavior: smooth; }
         .uid-box button, .form-group input, .form-group textarea { min-height: 40px; }
+    
+        .update-banner {
+            position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateY(-120%);
+            background: var(--accent); color: white; padding: 10px 16px; border-radius: 0 0 14px 14px;
+            font-size: 0.85rem; display: flex; align-items: center; gap: 12px; z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: transform 0.3s ease;
+        }
+        .update-banner.show { transform: translateX(-50%) translateY(0); }
+        .update-banner button {
+            background: rgba(255,255,255,0.25); border: none; color: white; padding: 5px 12px;
+            border-radius: 10px; font-weight: 600; font-size: 0.8rem; cursor: pointer;
+        }
     </style>
     <link rel="stylesheet" href="fix-layout.css" />
 </head>
@@ -284,6 +296,11 @@
     </div>
 
     <div id="toast" class="toast">Notifikasi</div>
+    <div id="update-banner" class="update-banner">
+        <span>🔄 Versi baru tersedia</span>
+        <button onclick="applyUpdate()">Perbarui</button>
+    </div>
+
 </div>
 
 <script>
@@ -692,6 +709,36 @@
         }
         showScreen('setup');
     })();
+
+    // ====================== SW UPDATE HANDLING ==============
+    let newWorker = null;
+    function applyUpdate() {
+        if (newWorker) {
+            newWorker.postMessage('skipWaiting');
+        }
+        document.getElementById('update-banner').classList.remove('show');
+        window.location.reload();
+    }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+                newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        document.getElementById('update-banner').classList.add('show');
+                    }
+                });
+            });
+            setInterval(() => reg.update(), 60000);
+        }).catch(err => console.warn('[SW] Registrasi gagal:', err));
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+        });
+    }
 </script>
 </body>
 </html>
