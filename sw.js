@@ -1,5 +1,5 @@
 // Service Worker untuk SecureChat PWA (Diperbarui)
-const CACHE_NAME = 'securechat-v5'; // Versi dinaikkan untuk membersihkan cache lama
+const CACHE_NAME = 'securechat-v11'; // Versi dinaikkan untuk membersihkan cache lama
 const urlsToCache = [
     './',
     './index.html',
