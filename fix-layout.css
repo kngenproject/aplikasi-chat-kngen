@@ -1,14 +1,14 @@
-/* ===== TEMA MODERN - iOS/Telegram Style ===== */
+/* ===== TEMA MODERN - True Black Premium Style ===== */
 
 :root {
-    --bg: #0b0b0f;
-    --surface: #17171c;
-    --surface2: #202027;
-    --border: rgba(255,255,255,0.06);
+    --bg: #000000;
+    --surface: #0d0d10;
+    --surface2: #18181c;
+    --border: rgba(255,255,255,0.05);
     --text: #f2f2f7;
     --textDim: #8e8e93;
-    --accent: #0a84ff;
-    --accentGlow: rgba(10,132,255,0.2);
+    --accent: #5e5ce6;
+    --accentGlow: rgba(94,92,230,0.22);
     --green: #30d158;
     --red: #ff453a;
     --radius: 20px;
@@ -19,6 +19,7 @@ html, body { height: 100%; overflow: hidden; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
     min-height: 100dvh !important;
+    background: var(--bg) !important;
 }
 .app {
     height: 100dvh !important;
@@ -26,26 +27,49 @@ body {
     padding-bottom: env(safe-area-inset-bottom) !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    background: var(--bg) !important;
 }
 
-/* Header flat, blur ala iOS navbar */
+/* Header - lebih ramping & flat ala iOS navbar */
 .header {
-    background: rgba(23,23,28,0.85) !important;
+    background: rgba(0,0,0,0.9) !important;
     backdrop-filter: blur(20px) !important;
     border-bottom: 0.5px solid var(--border) !important;
-    padding: 10px 16px !important;
+    padding: 6px 14px !important;
+    min-height: 46px !important;
 }
-.header-title { font-size: 1.05rem !important; font-weight: 700 !important; }
-.header-title .badge { background: var(--accent) !important; font-weight: 600 !important; }
-.icon-btn { color: var(--accent) !important; font-size: 1.3rem !important; }
+.header-title {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    gap: 6px !important;
+}
+.header-title .badge {
+    background: var(--accent) !important;
+    font-weight: 600 !important;
+    font-size: 0.55rem !important;
+    padding: 1px 8px !important;
+}
+.icon-btn {
+    color: var(--accent) !important;
+    font-size: 1.15rem !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 4px !important;
+}
 .icon-btn:hover { background: transparent !important; opacity: 0.6; }
 
 /* Setup screen */
 .setup { padding: 2rem 1.5rem !important; gap: 1.4rem !important; }
-.brand h1 { font-size: 1.8rem !important; font-weight: 800 !important; }
+.brand h1 {
+    font-size: 1.7rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, var(--accent), #a78bfa) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
 .brand p { color: var(--textDim) !important; font-size: 0.85rem !important; }
 .tabs { background: var(--surface2) !important; border-radius: 14px !important; padding: 3px !important; }
-.tab { border-radius: 11px !important; font-size: 0.85rem !important; padding: 8px 0 !important; }
+.tab { border-radius: 11px !important; font-size: 0.85rem !important; padding: 8px 0 !important; min-height: 40px !important; }
 .tab.active { background: var(--surface) !important; box-shadow: 0 1px 6px rgba(0,0,0,0.3) !important; }
 
 .form-group input, .form-group textarea {
@@ -60,12 +84,14 @@ body {
 .btn {
     border-radius: 14px !important;
     font-weight: 600 !important;
-    padding: 13px !important;
+    padding: 12px !important;
+    min-height: 44px !important;
 }
 .btn-secondary { background: var(--surface2) !important; border: none !important; }
 
 /* List chat */
 .list-item { border-bottom: 0.5px solid var(--border) !important; padding: 10px 16px !important; }
+.list-item:active { background: rgba(255,255,255,0.03) !important; }
 .avatar {
     border: none !important;
     background: linear-gradient(135deg, var(--accent), #5e5ce6) !important;
@@ -76,7 +102,7 @@ body {
 .list-preview { color: var(--textDim) !important; }
 
 /* Chat bubbles - rounded penuh ala iMessage/Telegram */
-.messages { background: var(--bg) !important; padding: 12px !important; }
+.messages { background: var(--bg) !important; padding: 12px !important; scroll-behavior: smooth; }
 .msg {
     border-radius: 18px !important;
     padding: 8px 14px !important;
@@ -93,9 +119,13 @@ body {
     border-bottom-left-radius: 4px !important;
 }
 
+/* Chat header (peer info) */
+.chat-header .peer-name { font-size: 1rem !important; font-weight: 700 !important; }
+.chat-header .peer-status { font-size: 0.7rem !important; color: var(--textDim) !important; }
+
 /* Input area ala iMessage */
 .input-area {
-    background: rgba(23,23,28,0.9) !important;
+    background: rgba(0,0,0,0.92) !important;
     backdrop-filter: blur(20px) !important;
     border-top: 0.5px solid var(--border) !important;
     padding: 8px 14px calc(8px + env(safe-area-inset-bottom)) 14px !important;
@@ -119,7 +149,7 @@ body {
 .btn-danger { background: var(--red) !important; }
 
 .toast {
-    background: rgba(32,32,39,0.9) !important;
+    background: rgba(24,24,28,0.92) !important;
     backdrop-filter: blur(12px) !important;
     border: none !important;
 }
