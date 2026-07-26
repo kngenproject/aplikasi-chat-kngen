@@ -343,7 +343,7 @@
             while (b64.length % 4 !== 0) b64 += '=';
             const raw = atob(b64);
             const buf = Uint8Array.from(raw, c => c.charCodeAt(0)).buffer;
-            return await crypto.subtle.importKey("spki", buf, { name:"ECDH", namedCurve:"P-256" }, true, ["deriveKey","deriveBits"]);
+            return await crypto.subtle.importKey("spki", buf, { name:"ECDH", namedCurve:"P-256" }, true, []);
         } catch(e) {
             console.error("importPub error:", e);
             throw new Error("Gagal mengimpor kunci publik: " + e.message);
