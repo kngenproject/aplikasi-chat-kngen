@@ -1,8 +1,9 @@
 // Service Worker untuk SecureChat PWA (Diperbarui)
-const CACHE_NAME = 'securechat-v11';
+const CACHE_NAME = 'securechat-v12';
 const urlsToCache = [
     './',
     './index.html',
+    './fix-layout.css',
     './manifest.json',
     './icon-192.png',
     './icon-512.png',
@@ -36,6 +37,7 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+    if (event.request.method !== 'GET') return;
     if (!event.request.url.startsWith(self.location.origin) && !event.request.url.startsWith('https://')) {
         return;
     }
@@ -50,7 +52,7 @@ self.addEventListener('fetch', event => {
                     });
                 }
                 return networkResponse;
-            }).catch(() => {});
+            }).catch(() => cachedResponse);
 
             return cachedResponse || fetchPromise;
         }).catch(() => {
@@ -86,4 +88,8 @@ self.addEventListener('push', event => {
             );
         }
     }
+});
+
+self.addEventListener('message', event => {
+    if (event.data === 'skipWaiting') self.skipWaiting();
 });
