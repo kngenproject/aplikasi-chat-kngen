@@ -202,3 +202,17 @@ body {
 .search-bar input::placeholder {
     color: var(--textDim) !important;
 }
+
+/* Fix header vertical alignment - hilangkan potongan atas */
+.header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 8px 14px !important;
+}
+.header-title {
+    line-height: 1.2 !important;
+    padding: 2px 0 !important;
+}
