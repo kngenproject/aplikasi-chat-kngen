@@ -235,6 +235,10 @@
                 <button class="icon-btn" onclick="showScreen('profile')" title="Profil">👤</button>
             </div>
         </div>
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input id="chat-search" type="text" placeholder="Cari obrolan..." oninput="filterChatList(this.value)" />
+        </div>
         <div class="list" id="chat-list"></div>
     </div>
 
