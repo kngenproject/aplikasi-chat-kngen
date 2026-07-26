@@ -707,23 +707,48 @@
         });
     }
 
+    
     async function startNewChat() {
-        const targetUID = document.getElementById('peer-uid-input').value.trim();
-        if (!targetUID) return showToast('Masukkan UID target!');
-        if (targetUID === myUID) return showToast('Tidak bisa chat dengan diri sendiri!');
-
+        const userInput = document.getElementById('peer-uid-input').value.trim();
+        if (!userInput) return showToast('Masukkan Username atau UID target!');
+        
         try {
-            showToast('🔄 Mencari profil...');
-            const snapshot = await db.ref(`users/${targetUID}`).once('value');
-            if (!snapshot.exists()) return showToast('❌ UID tidak ditemukan.');
-            const peer = snapshot.val();
+            showToast('🔄 Mencari teman...');
+            let peer = null;
+
+            // 1. Jika input diawali 'sc-', cari langsung berdasarkan UID
+            if (userInput.startsWith('sc-')) {
+                const snapshot = await db.ref('users/' + userInput).once('value');
+                if (snapshot.exists()) {
+                    peer = snapshot.val();
+                }
+            } else {
+                // 2. Jika input berupa Username, cari berdasarkan Nama (case-insensitive)
+                const snapshot = await db.ref('users').once('value');
+                if (snapshot.exists()) {
+                    const allUsers = snapshot.val();
+                    for (let id in allUsers) {
+                        const dbName = (allUsers[id].name || '').trim().toLowerCase();
+                        if (dbName === userInput.toLowerCase()) {
+                            peer = allUsers[id];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!peer) return showToast('❌ Username / UID teman tidak ditemukan!');
+            if (peer.uid === myUID) return showToast('Tidak bisa obrolan dengan diri sendiri!');
+
             const newChatId = myUID < peer.uid ? `${myUID}_${peer.uid}` : `${peer.uid}_${myUID}`;
             document.getElementById('peer-uid-input').value = '';
             openChat(newChatId, peer.uid, peer.name, peer.publicKey);
         } catch (err) {
-            showToast('❌ Gagal mencari.');
+            console.error(err);
+            showToast('❌ Gagal mencari kontak.');
         }
     }
+
 
     async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
         if (chatMsgListener && activeChatId) db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
@@ -756,6 +781,7 @@
         container.scrollTop = container.scrollHeight;
     }
 
+    
     async function sendMessage() {
         const inputEl = document.getElementById('message-input');
         const text = inputEl.value.trim();
@@ -765,14 +791,28 @@
         try {
             const encData = await encryptMessage(activePeerPubKey, text);
             const now = firebase.database.ServerValue.TIMESTAMP;
-            await db.ref(`chats/${activeChatId}/messages`).push().set({ sender: myUID, cipher: encData.cipher, iv: encData.iv, timestamp: now });
             
-            db.ref(`userChats/${myUID}/${activeChatId}`).update({ lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: activePeerUID, peerName: activePeerName, peerPubKey: myPublicKeyB64 });
-            db.ref(`userChats/${activePeerUID}/${activeChatId}`).update({ lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: myUID, peerName: myName, peerPubKey: myPublicKeyB64 });
+            // 1. Simpan pesan terenkripsi ke node chats
+            await db.ref('chats/' + activeChatId + '/messages').push().set({ 
+                sender: myUID, 
+                cipher: encData.cipher, 
+                iv: encData.iv, 
+                timestamp: now 
+            });
+            
+            // 2. Update preview obrolan di daftar chat saya & lawan bicara
+            const myChatMeta = { lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: activePeerUID, peerName: activePeerName, peerPubKey: activePeerPubKeyB64 || '' };
+            const peerChatMeta = { lastMsg: "🔒 Pesan Terenkripsi", timestamp: now, peerUID: myUID, peerName: myName, peerPubKey: myPublicKeyB64 || '' };
+
+            await db.ref('userChats/' + myUID + '/' + activeChatId).update(myChatMeta);
+            await db.ref('userChats/' + activePeerUID + '/' + activeChatId).update(peerChatMeta);
+
         } catch (err) {
-            showToast('❌ Gagal kirim pesan.');
+            console.error(err);
+            showToast('❌ Gagal mengirim pesan.');
         }
     }
+
 
     function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
 
