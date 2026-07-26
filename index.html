@@ -1,1019 +1,697 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="description" content="SecureChat — Pesan terenkripsi E2EE berbasis UID">
-    <meta name="theme-color" content="#0d1117">
-    <link rel="manifest" href="manifest.json" id="manifest-link">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0f1a" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <title>SecureChat — E2EE</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
+    // ====================== UX HELPERS ============================
+    function setBtnLoading(btn, isLoading) {
+        if (!btn) return;
+        btn.classList.toggle('loading', isLoading);
+        btn.disabled = isLoading;
+    }
 
-    <title>SecureChat — E2EE Chat App</title>
+    const _origHandleLogin = handleLogin;
+    handleLogin = async function() {
+        const btn = document.querySelector('#form-login .btn');
+        setBtnLoading(btn, true);
+        try { await _origHandleLogin(); } finally { setBtnLoading(btn, false); }
+    };
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    const _origHandleRegister = handleRegister;
+    handleRegister = async function() {
+        const btn = document.querySelector('#form-register .btn');
+        setBtnLoading(btn, true);
+        try { await _origHandleRegister(); } finally { setBtnLoading(btn, false); }
+    };
+
+    const _origHandleImport = handleImport;
+    handleImport = async function() {
+        const btn = document.querySelector('#form-import .btn');
+        setBtnLoading(btn, true);
+        try { await _origHandleImport(); } finally { setBtnLoading(btn, false); }
+    };
+
+    const _origOpenChat = openChat;
+    openChat = async function(...args) {
+        await _origOpenChat(...args);
+        const input = document.getElementById('msg-input');
+        if (input) setTimeout(() => input.focus(), 150);
+    };
+</script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --bg-main: #0d1117;
-            --bg-surface: #161b22;
-            --bg-input: #21262d;
-            --text-main: #c9d1d9;
-            --text-muted: #8b949e;
-            --accent: #58a6ff;
-            --accent-hover: #1f6feb;
-            --success: #238636;
-            --danger: #da3633;
-            --border: #30363d;
-            --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --font-mono: 'Space Mono', SFMono-Regular, Consolas, monospace;
+            --bg: #0a0f1a;
+            --surface: #141b2b;
+            --surface2: #1e2a3d;
+            --border: #2a3a55;
+            --text: #e8edf5;
+            --textDim: #8899bb;
+            --accent: #4f8cff;
+            --accentGlow: rgba(79,140,255,0.25);
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --radius: 16px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.45);
+            --transition: 0.25s cubic-bezier(0.2,0,0,1);
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--font-sans);
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 480px;
-            height: 100vh;
-            background-color: var(--bg-main);
-            border-left: 1px solid var(--border);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .screen { display: none; flex-direction: column; height: 100%; width: 100%; animation: fadeIn 0.15s ease-in-out; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; height: 100dvh; overflow: hidden; }
+        .app { width: 100%; max-width: 480px; height: 100dvh; background: var(--surface); display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+        .screen { display: none; flex-direction: column; height: 100%; width: 100%; overflow: hidden; animation: fadeUp 0.2s ease; }
         .screen.active { display: flex !important; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .setup { padding: 1.8rem 1.5rem; justify-content: center; gap: 1.2rem; }
+        .brand { text-align: center; }
+        .brand h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+        .brand p { color: var(--textDim); font-size: 0.85rem; margin-top: 4px; }
+        .tabs { display: flex; background: var(--surface2); border-radius: 12px; padding: 4px; }
+        .tab { flex:1; background: transparent; border: none; padding: 10px 0; font-weight: 600; font-size: 0.85rem; color: var(--textDim); border-radius: 10px; transition: var(--transition); cursor: pointer; }
+        .tab.active { background: var(--accent); color: white; box-shadow: 0 4px 12px var(--accentGlow); }
+        .form { display: none; flex-direction: column; gap: 0.8rem; margin-top: 0.3rem; }
+        .form.active { display: flex; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 0.75rem; font-weight: 500; color: var(--textDim); letter-spacing: 0.3px; }
+        .form-group input, .form-group textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 0.95rem; color: var(--text); outline: none; transition: var(--transition); font-family: inherit; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentGlow); }
+        .btn { background: var(--accent); border: none; border-radius: 12px; padding: 12px; font-weight: 600; font-size: 0.95rem; color: white; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:active { transform: scale(0.97); }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-danger { background: var(--red); }
 
-        /* Setup Screen */
-        .setup-box { padding: 2rem; display: flex; flex-direction: column; justify-content: center; height: 100%; overflow-y: auto; }
-        .setup-form { display: none; }
-        .setup-form.active { display: block !important; }
-        .brand { text-align: center; margin-bottom: 2rem; }
-        .brand h1 { font-family: var(--font-mono); font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; }
-        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; gap: 0.25rem; }
-        .tab-btn { flex: 1; padding: 0.6rem 0.2rem; background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.8rem; }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-        .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; }
-        .form-group label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, textarea { background-color: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; color: var(--text-main); font-family: inherit; font-size: 1rem; transition: border-color 0.2s; }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn { background-color: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; }
-        .btn:hover { background-color: var(--accent-hover); }
-        .btn-danger { background-color: var(--danger); }
-        .btn-secondary { background-color: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main); }
+        .header { padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; min-height: 56px; backdrop-filter: blur(4px); }
+        .header-title { font-weight: 700; font-size: 1.2rem; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+        .header-title .badge { background: var(--accent); color: white; font-size: 0.6rem; padding: 2px 10px; border-radius: 20px; font-weight: 600; }
+        .icon-btn { background: transparent; border: none; color: var(--textDim); font-size: 1.4rem; cursor: pointer; padding: 6px; border-radius: 10px; transition: var(--transition); }
+        .icon-btn:hover { background: var(--surface2); color: var(--text); }
 
-        /* Header components */
-        .app-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-surface); min-height: 60px; }
-        .header-title { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 700; color: var(--accent); }
-        .header-actions { display: flex; gap: 0.75rem; }
-        .icon-btn { background: none; border: none; color: var(--text-main); cursor: pointer; padding: 0.25rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+        .list { flex:1; overflow-y: auto; padding: 6px 0; }
+        .list-item { display: flex; align-items: center; padding: 12px 16px; gap: 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: var(--transition); }
+        .list-item:active { background: var(--surface2); }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; color: var(--accent); flex-shrink: 0; }
+        .list-info { flex:1; min-width:0; }
+        .list-name { font-weight: 600; display: flex; justify-content: space-between; }
+        .list-time { font-size: 0.7rem; color: var(--textDim); }
+        .list-preview { font-size: 0.85rem; color: var(--textDim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .empty { flex:1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--textDim); gap: 8px; padding: 2rem; text-align: center; }
+        .empty span { font-size: 3rem; opacity: 0.5; }
 
-        /* Main Screen Layout */
-        .main-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .chat-list-item { display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .chat-list-item:hover { background-color: var(--bg-surface); }
-        .avatar { width: 44px; height: 44px; border-radius: 50%; background-color: var(--bg-input); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent); font-family: var(--font-mono); margin-right: 1rem; }
-        .chat-info { flex: 1; min-width: 0; }
-        .chat-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
-        .chat-name { font-weight: 600; color: var(--text-main); }
-        .chat-time { font-size: 0.75rem; color: var(--text-muted); }
-        .chat-preview { font-size: 0.85rem; color: var(--text-muted); }
+        .chat-header { display: flex; align-items: center; gap: 12px; flex:1; }
+        .chat-header .peer-name { font-weight: 600; font-size: 1rem; }
+        .chat-header .peer-status { font-size: 0.7rem; color: var(--textDim); display: flex; align-items: center; gap: 4px; }
+        .chat-header .peer-status .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .dot.online { background: var(--green); }
+        .dot.offline { background: var(--textDim); }
 
-        /* Chat Room Screen */
-        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; background-color: var(--bg-main); }
-        .msg-bubble { max-width: 75%; padding: 0.65rem 0.85rem; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
-        .msg-bubble.sent { background-color: var(--accent); color: #fff; align-self: flex-end; }
-        .msg-bubble.received { background-color: var(--bg-surface); color: var(--text-main); align-self: flex-start; border: 1px solid var(--border); }
-        .msg-time { font-size: 0.65rem; display: block; text-align: right; margin-top: 0.25rem; opacity: 0.8; }
+        .messages { flex:1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 16px; font-size: 0.95rem; line-height: 1.4; word-break: break-word; position: relative; animation: fadeUp 0.15s ease; }
+        .msg.sent { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg.received { background: var(--surface2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+        .msg .time { font-size: 0.6rem; opacity: 0.7; margin-top: 4px; display: block; text-align: right; }
+        .msg .sender { font-size: 0.7rem; font-weight: 600; color: var(--accent); margin-bottom: 2px; display: block; }
 
-        .chat-input-area { padding: 0.75rem 1rem; border-top: 1px solid var(--border); background-color: var(--bg-surface); display: flex; align-items: flex-end; gap: 0.75rem; }
-        .chat-textarea { flex: 1; background-color: var(--bg-input); border: 1px solid var(--border); border-radius: 20px; padding: 0.6rem 1rem; color: var(--text-main); resize: none; max-height: 100px; }
+        .input-area { padding: 8px 14px; background: var(--surface); border-top: 1px solid var(--border); display: flex; align-items: flex-end; gap: 10px; }
+        .input-area textarea { flex:1; background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 8px 16px; color: var(--text); font-size: 0.95rem; resize: none; max-height: 100px; outline: none; font-family: inherit; transition: var(--transition); }
+        .input-area textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentGlow); }
+        .input-area .send { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); flex-shrink: 0; }
+        .input-area .send:disabled { opacity: 0.4; pointer-events: none; }
 
-        /* Profile */
-        .profile-card { padding: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-        .profile-avatar { width: 70px; height: 70px; font-size: 1.8rem; border-radius: 50%; background-color: var(--bg-surface); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--accent); }
-        .uid-container { background-color: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; width: 100%; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 0.85rem; }
+        .profile { padding: 1.8rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1.2rem; text-align: center; }
+        .profile .big-avatar { width: 76px; height: 76px; border-radius: 50%; background: var(--surface2); border: 3px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: var(--accent); }
+        .profile .uid-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; width: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-family: monospace; }
+        .profile .uid-box button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 1.2rem; }
 
-        /* Toast */
-        .toast { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: all 0.2s ease; z-index: 9999; pointer-events: none; }
+        .toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 18px; border-radius: 40px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 999; backdrop-filter: blur(8px); }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 2rem; gap: 0.5rem; }
+
+        #qrcode { background: white; padding: 10px; border-radius: 12px; display: inline-block; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* ===== UX FIXES: kontras, target sentuh, hierarki, loading ===== */
+        :root { --textDim: #9aa5c3 !important; }
+        .icon-btn { min-width: 44px; min-height: 44px; display:flex; align-items:center; justify-content:center; }
+        .tab { min-height: 44px; }
+        .send { min-width: 44px; min-height: 44px; }
+        .btn { min-height: 46px; position: relative; }
+        .btn.loading { color: transparent !important; pointer-events: none; }
+        .btn.loading::after {
+            content: ''; position: absolute; width: 18px; height: 18px;
+            border: 2.5px solid rgba(255,255,255,0.4); border-top-color: white;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .chat-header .peer-name { font-size: 1.05rem !important; font-weight: 700 !important; }
+        .chat-header .peer-status { font-size: 0.72rem !important; color: var(--textDim) !important; }
+        .messages { scroll-behavior: smooth; }
+        .uid-box button, .form-group input, .form-group textarea { min-height: 40px; }
     </style>
-
-    
-
-
-    <style id="absolute-mobile-fix">
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            height: 100dvh;
-            background-color: #0b0e14;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            position: fixed;
-        }
-
-        .app-container {
-            width: 100%;
-            height: 100%;
-            height: 100dvh;
-            max-width: 480px;
-            margin: 0 auto;
-            background-color: #121824;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .screen {
-            display: none;
-            width: 100%;
-            height: 100%;
-            flex-direction: column;
-            overflow: hidden;
-            background-color: #121824;
-        }
-
-        .screen.active {
-            display: flex !important;
-        }
-
-        /* KHUSUS CHAT ROOM: Paksa Struktur Fleksibel Penuh */
-        #screen-chat-room.active {
-            display: flex !important;
-            flex-direction: column !important;
-            height: 100% !important;
-            height: 100dvh !important;
-            overflow: hidden !important;
-        }
-
-        .app-header {
-            flex: 0 0 60px;
-            background-color: #1a2332;
-            display: flex;
-            align-items: center;
-            padding: 0 12px;
-            border-bottom: 1px solid #2a364f;
-            z-index: 10;
-        }
-
-        .chat-messages {
-            flex: 1 1 auto !important;
-            background-color: #0f141d;
-            padding: 16px;
-            overflow-y: auto !important;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .chat-input-area {
-            flex: 0 0 auto !important;
-            background-color: #1a2332;
-            padding: 10px 14px;
-            border-top: 1px solid #2a364f;
-            display: flex !important;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .chat-textarea {
-            flex: 1;
-            background-color: #0f141d;
-            border: 1px solid #2a364f;
-            border-radius: 20px;
-            padding: 10px 16px;
-            color: #ffffff;
-            font-size: 0.95rem;
-            outline: none;
-            resize: none;
-            max-height: 100px;
-        }
-
-        .send-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .send-btn:disabled {
-            background-color: #2a364f;
-            color: #4b5563;
-            cursor: not-allowed;
-        }
-    </style>
-
+    <link rel="stylesheet" href="fix-layout.css" />
 </head>
 <body>
+<div class="app" id="app">
 
-    <div class="app-container">
-        
-        <!-- SETUP SCREEN -->
-        <div id="screen-setup" class="screen active">
-            <div class="setup-box">
-                <div class="brand">
-                    <h1>SecureChat</h1>
-                    <p style="color: var(--text-muted); font-size: 0.85rem;">End-to-End Encrypted Messaging</p>
-                </div>
-                
-                <div class="tabs">
-                    <button id="tab-btn-login" class="tab-btn active" onclick="switchSetupTab('login')">MASUK</button>
-                    <button id="tab-btn-register" class="tab-btn" onclick="switchSetupTab('register')">DAFTAR BARU</button>
-                    <button id="tab-btn-import" class="tab-btn" onclick="switchSetupTab('import')">IMPOR KUNCI</button>
-                </div>
-
-                <div id="form-login" class="setup-form active">
-                    <div class="form-group">
-                        <label for="login-uid">Username / UID Anda</label>
-                        <input type="text" id="login-uid" placeholder="Masukkan Username / UID...">
-                    </div>
-                    <div class="form-group">
-                        <label for="login-pin">PIN Keamanan</label>
-                        <input type="password" id="login-pin" maxlength="6" placeholder="Masukkan PIN...">
-                    </div>
-                    <button id="login-submit" class="btn" style="width: 100%;" onclick="handleLogin()">Masuk ke Aplikasi</button>
-                </div>
-
-                <div id="form-register" class="setup-form">
-                    <div class="form-group">
-                        <label for="reg-name">Nama Tampilan</label>
-                        <input type="text" id="reg-name" placeholder="Contoh: Alice, Bob, dll.">
-                    </div>
-                    <div class="form-group">
-                        <label for="reg-pin">PIN Keamanan (4-6 Angka)</label>
-                        <input type="password" id="reg-pin" maxlength="6" placeholder="Buat PIN Rahasia...">
-                    </div>
-                    <button id="register-submit" class="btn" style="width: 100%;" onclick="handleRegister()">Buat Akun Baru</button>
-                </div>
-
-                <div id="form-import" class="setup-form">
-                    <div class="form-group">
-                        <label for="import-uid">UID Akun Anda</label>
-                        <input type="text" id="import-uid" placeholder="Contoh: sc-xxxxxxxxx">
-                    </div>
-                    <div class="form-group">
-                        <label for="import-key-str">Kode Cadangan (JSON)</label>
-                        <textarea id="import-key-str" rows="3" placeholder="Tempel kode cadangan rahasia di sini..."></textarea>
-                    </div>
-                    <button id="import-submit" class="btn" style="width: 100%;" onclick="handleImportKey()">Impor Akun ke Perangkat Ini</button>
-                </div>
+    <!-- SETUP -->
+    <div id="screen-setup" class="screen active">
+        <div class="setup">
+            <div class="brand">
+                <h1>🔒 SecureChat</h1>
+                <p>End-to-End Encrypted</p>
             </div>
-        </div>
-
-        <!-- HOME SCREEN -->
-        <div id="screen-home" class="screen">
-            <div class="app-header">
-                <span class="header-title">SecureChat</span>
-                <div class="header-actions">
-                    <button id="home-add-btn" class="icon-btn" title="Chat Baru" onclick="showScreen('add-chat')">💬</button>
-                    <button id="home-profile-btn" class="icon-btn" title="Profil" onclick="openProfileScreen()">👤</button>
-                </div>
+            <div class="tabs">
+                <button class="tab active" data-tab="login">Masuk</button>
+                <button class="tab" data-tab="register">Daftar</button>
+                <button class="tab" data-tab="import">Impor</button>
             </div>
-            <div class="main-content" id="chat-list-container"></div>
-        </div>
-
-        <!-- ADD CHAT SCREEN -->
-        <div id="screen-add-chat" class="screen">
-            <div class="app-header">
-                <button id="add-back-btn" class="icon-btn" onclick="showScreen('home')">⬅️</button>
-                <span class="header-title">Mulai Obrolan</span>
-                <div style="width:24px;"></div>
-            </div>
-            <div class="setup-box" style="justify-content: flex-start; padding-top: 1.5rem;">
-                <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; border: 1px solid var(--border);"></div>
+            <div id="form-login" class="form active">
                 <div class="form-group">
-                    <label for="peer-uid-input">UID Tujuan Teman</label>
-                    <input type="text" id="peer-uid-input" placeholder="Tempel/Masukkan UID teman...">
+                    <label>Username atau UID</label>
+                    <input id="login-uid" placeholder="cth: Alice atau sc-xxxxx" />
                 </div>
-                <button id="start-chat-submit" class="btn" style="width: 100%;" onclick="startNewChat()">Cari & Buka Obrolan</button>
+                <div class="form-group">
+                    <label>PIN (4-6 angka)</label>
+                    <input id="login-pin" type="password" maxlength="6" placeholder="••••" />
+                </div>
+                <button class="btn" onclick="handleLogin()">🔓 Masuk</button>
+            </div>
+            <div id="form-register" class="form">
+                <div class="form-group">
+                    <label>Nama Tampilan</label>
+                    <input id="reg-name" placeholder="Nama Anda" />
+                </div>
+                <div class="form-group">
+                    <label>PIN (4-6 angka)</label>
+                    <input id="reg-pin" type="password" maxlength="6" placeholder="••••" />
+                </div>
+                <button class="btn" onclick="handleRegister()">✨ Buat Akun</button>
+            </div>
+            <div id="form-import" class="form">
+                <div class="form-group">
+                    <label>UID Akun</label>
+                    <input id="import-uid" placeholder="sc-xxxxx" />
+                </div>
+                <div class="form-group">
+                    <label>Kode Cadangan (JSON)</label>
+                    <textarea id="import-key" rows="3" placeholder='{"uid":"sc-...","key":"..."}'></textarea>
+                </div>
+                <div class="form-group">
+                    <label>PIN Baru (4-6 angka)</label>
+                    <input id="import-pin" type="password" maxlength="6" placeholder="••••" />
+                </div>
+                <button class="btn" onclick="handleImport()">📥 Impor Akun</button>
             </div>
         </div>
-
-        
-        <!-- CHAT ROOM SCREEN -->
-        
-        <!-- CHAT ROOM SCREEN -->
-        <div id="screen-chat-room" class="screen">
-            <div class="app-header">
-                <button id="chat-back-btn" class="icon-btn" onclick="showScreen('home')">⬅️</button>
-                <div class="header-info">
-                    <div id="chat-room-title" class="header-title">Nama Teman</div>
-                    <div id="chat-e2ee-status" class="header-status" style="color: #10b981;">🔒 E2EE Active</div>
-                </div>
-            </div>
-            
-            <div class="chat-messages" id="chat-messages-container">
-                <div style="text-align: center; color: #607090; margin-top: 40px; font-size: 0.85rem;">
-                    💬 Mulai percakapan aman terenkripsi...
-                </div>
-            </div>
-
-            <div class="chat-input-area">
-                <textarea id="message-input" class="chat-textarea" rows="1" placeholder="Ketik pesan..." oninput="document.getElementById('send-btn').disabled = this.value.trim() === ''"></textarea>
-                <button id="send-btn" class="send-btn" disabled onclick="sendMessage()">➡️</button>
-            </div>
-        </div>
-
-        <!-- PROFILE SCREEN -->
-        <div id="screen-profile" class="screen">
-            <div class="app-header">
-                <button id="profile-back-btn" class="icon-btn" onclick="showScreen('home')">⬅️</button>
-                <span class="header-title">Profil Saya</span>
-                <div style="width:24px;"></div>
-            </div>
-            <div class="main-content">
-                <div class="profile-card">
-                    <div class="profile-avatar" id="my-avatar-char">U</div>
-                    <h2 id="my-profile-name">Nama Pengguna</h2>
-                    <div id="qrcode-container" style="background:#fff; padding:10px; border-radius:10px; margin: 0.5rem 0;"></div>
-                    <div class="uid-container">
-                        <span id="my-uid-display" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; color:var(--accent);">Mencari UID...</span>
-                        <button id="copy-uid-btn" class="icon-btn" title="Salin UID" onclick="handleCopyUID()">📋</button>
-                    </div>
-                    <button id="export-key-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="handleExportKey()">📥 Cadangkan Kunci (Backup)</button>
-                    <button id="logout-btn" class="btn btn-danger" style="width: 100%; margin-top: 0.5rem;" onclick="handleLogout()">Keluar dari Akun</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="app-toast" class="toast">Notifikasi</div>
-
     </div>
 
-    <script>
-    let db = null;
-    let myUID = null;
-    let myName = null;
-    let myPrivateKey = null;
-    let myPublicKeyB64 = null;
+    <!-- HOME -->
+    <div id="screen-home" class="screen">
+        <div class="header">
+            <div class="header-title">💬 SecureChat <span class="badge">E2EE</span></div>
+            <div>
+                <button class="icon-btn" onclick="showScreen('add-chat')" title="Chat baru">✏️</button>
+                <button class="icon-btn" onclick="showScreen('profile')" title="Profil">👤</button>
+            </div>
+        </div>
+        <div class="list" id="chat-list"></div>
+    </div>
 
-    let activeChatId = null;
-    let activePeerUID = null;
-    let activePeerPubKey = null;
-    let activePeerName = null;
-    let chatMsgListener = null;
+    <!-- ADD CHAT -->
+    <div id="screen-add-chat" class="screen">
+        <div class="header">
+            <button class="icon-btn" onclick="showScreen('home')">←</button>
+            <div class="header-title">Mulai Obrolan</div>
+            <div style="width:40px;"></div>
+        </div>
+        <div style="padding:1.2rem; display:flex; flex-direction:column; gap:0.8rem;">
+            <div id="qr-reader" style="border-radius:12px; overflow:hidden; border:1px solid var(--border);"></div>
+            <div class="form-group">
+                <label>UID Teman</label>
+                <input id="peer-uid" placeholder="Tempel UID teman..." />
+            </div>
+            <button class="btn" onclick="startNewChat()">🔍 Cari & Buka</button>
+        </div>
+    </div>
 
-    const IDB_NAME = 'SecureChatKeyStore';
-    const IDB_STORE = 'private_keys';
+    <!-- CHAT ROOM -->
+    <div id="screen-chat-room" class="screen">
+        <div class="header">
+            <button class="icon-btn" onclick="closeChat()">←</button>
+            <div class="chat-header">
+                <div class="avatar" id="chat-peer-avatar" style="width:36px;height:36px;font-size:0.9rem;">?</div>
+                <div>
+                    <div class="peer-name" id="chat-peer-name">Teman</div>
+                    <div class="peer-status"><span class="dot offline" id="chat-peer-dot"></span> <span id="chat-peer-status">Menghubungi...</span></div>
+                </div>
+            </div>
+            <div style="width:40px;"></div>
+        </div>
+        <div class="messages" id="chat-messages"></div>
+        <div class="input-area">
+            <textarea id="msg-input" rows="1" placeholder="Ketik pesan..." oninput="document.getElementById('send-btn').disabled = this.value.trim()===''"></textarea>
+            <button class="send" id="send-btn" disabled onclick="sendMessage()">➤</button>
+        </div>
+    </div>
 
-    function initFirebase() {
-        const firebaseConfig = {
-            apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
-            authDomain: "aplikasi-chat-kngen.firebaseapp.com",
-            projectId: "aplikasi-chat-kngen",
-            storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
-            messagingSenderId: "858845228237",
-            appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84",
-            databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app/"
-        };
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        return true;
+    <!-- PROFILE -->
+    <div id="screen-profile" class="screen">
+        <div class="header">
+            <button class="icon-btn" onclick="showScreen('home')">←</button>
+            <div class="header-title">Profil</div>
+            <div style="width:40px;"></div>
+        </div>
+        <div class="profile">
+            <div class="big-avatar" id="my-avatar">U</div>
+            <h2 id="my-name">Nama</h2>
+            <div id="qrcode"></div>
+            <div class="uid-box">
+                <span id="my-uid" style="flex:1;overflow:hidden;text-overflow:ellipsis;">UID</span>
+                <button onclick="copyUID()">📋</button>
+            </div>
+            <button class="btn btn-secondary" onclick="exportKey()">💾 Cadangkan Kunci</button>
+            <button class="btn btn-danger" onclick="handleLogout()">🚪 Keluar</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Notifikasi</div>
+</div>
+
+<script>
+    // ====================== FIREBASE =========================
+    const config = {
+        apiKey: "AIzaSyAY7ZeulxC8oN5qiFGcir7KjpcVaR0xs-w",
+        authDomain: "aplikasi-chat-kngen.firebaseapp.com",
+        projectId: "aplikasi-chat-kngen",
+        storageBucket: "aplikasi-chat-kngen.firebasestorage.app",
+        messagingSenderId: "858845228237",
+        appId: "1:858845228237:web:446f0ff51a9a75d0fbcd84",
+        databaseURL: "https://aplikasi-chat-kngen-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    // ====================== STATE ===========================
+    let myUID = null, myName = null, myPrivKey = null, myPubB64 = null;
+    let activeChatId = null, activePeer = null, activePeerPub = null, activePeerPubB64 = null;
+    let msgListener = null;
+    const IDB_NAME = 'SecureChatKeys', IDB_STORE = 'keys';
+
+    function openDB() {
+        return new Promise((res, rej) => {
+            const req = indexedDB.open(IDB_NAME, 1);
+            req.onupgradeneeded = e => { const d = e.target.result; if(!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE); };
+            req.onsuccess = e => res(e.target.result);
+            req.onerror = e => rej(e.target.error);
+        });
     }
-
-    function openKeyDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(IDB_NAME, 1);
-            request.onupgradeneeded = (e) => {
-                const d = e.target.result;
-                if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE);
-            };
-            request.onsuccess = (e) => resolve(e.target.result);
-            request.onerror = (e) => reject(e.target.error);
+    async function storeKey(uid, key) {
+        const db2 = await openDB();
+        return new Promise((res, rej) => {
+            const tx = db2.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(key, uid);
+            tx.oncomplete = res; tx.onerror = rej;
+        });
+    }
+    async function getKey(uid) {
+        const db2 = await openDB();
+        return new Promise((res, rej) => {
+            const tx = db2.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(uid);
+            req.onsuccess = () => res(req.result);
+            req.onerror = rej;
         });
     }
 
-    async function storePrivateKey(uid, keyObject) {
-        const idb = await openKeyDB();
-        return new Promise((resolve, reject) => {
-            const tx = idb.transaction(IDB_STORE, 'readwrite');
-            const store = tx.objectStore(IDB_STORE);
-            const request = store.put(keyObject, uid);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
+    // ====================== CRYPTO (PERBAIKAN) ==============
+    async function genKeyPair() { return crypto.subtle.generateKey({ name:"ECDH", namedCurve:"P-256" }, true, ["deriveKey","deriveBits"]); }
+    async function exportPub(key) {
+        const raw = await crypto.subtle.exportKey("spki", key);
+        return btoa(String.fromCharCode(...new Uint8Array(raw)));
     }
-
-    async function getPrivateKey(uid) {
-        const idb = await openKeyDB();
-        return new Promise((resolve, reject) => {
-            const tx = idb.transaction(IDB_STORE, 'readonly');
-            const store = tx.objectStore(IDB_STORE);
-            const request = store.get(uid);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    async function deletePrivateKey(uid) {
-        const idb = await openKeyDB();
-        return new Promise((resolve, reject) => {
-            const tx = idb.transaction(IDB_STORE, 'readwrite');
-            const store = tx.objectStore(IDB_STORE);
-            const request = store.delete(uid);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    async function generateKeyPair() {
-        return await window.crypto.subtle.generateKey(
-            { name: "ECDH", namedCurve: "P-256" },
-            true, ["deriveKey", "deriveBits"]
-        );
-    }
-
-    async function exportPublicKey(key) {
-        const exported = await window.crypto.subtle.exportKey("spki", key);
-        return b64Encode(exported);
-    }
-
-    async function importPublicKey(b64Str) {
-        const buf = b64Decode(b64Str);
-        return await window.crypto.subtle.importKey("spki", buf, { name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey", "deriveBits"]);
-    }
-
-    async function deriveSharedKey(privateKey, publicKey) {
-        return await window.crypto.subtle.deriveKey({ name: "ECDH", public: publicKey }, privateKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
-    }
-
-    async function encryptMessage(sharedKey, text) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(text);
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, sharedKey, data);
-        return { cipher: b64Encode(ciphertext), iv: b64Encode(iv) };
-    }
-
-    async function decryptMessage(sharedKey, cipherB64, ivB64) {
+    async function importPub(b64) {
         try {
-            const cipher = b64Decode(cipherB64);
-            const iv = b64Decode(ivB64);
-            const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, sharedKey, cipher);
-            return new TextDecoder().decode(decrypted);
-        } catch (err) {
-            return "⚠️ [Gagal dekripsi pesan]";
+            while (b64.length % 4 !== 0) b64 += '=';
+            const raw = atob(b64);
+            const buf = Uint8Array.from(raw, c => c.charCodeAt(0)).buffer;
+            return await crypto.subtle.importKey("spki", buf, { name:"ECDH", namedCurve:"P-256" }, true, ["deriveKey","deriveBits"]);
+        } catch(e) {
+            console.error("importPub error:", e);
+            throw new Error("Gagal mengimpor kunci publik: " + e.message);
         }
     }
-
-    function b64Encode(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
-    function b64Decode(str) {
-        const binaryStr = atob(str);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) { bytes[i] = binaryStr.charCodeAt(i); }
-        return bytes.buffer;
-    }
-
-    function showScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active');
-            s.style.display = 'none';
-        });
-        const target = document.getElementById(`screen-${screenId}`);
-        if (target) {
-            target.classList.add('active');
-            target.style.display = 'flex';
+    async function deriveShared(priv, pub) {
+        try {
+            return await crypto.subtle.deriveKey({ name:"ECDH", public: pub }, priv, { name:"AES-GCM", length:256 }, true, ["encrypt","decrypt"]);
+        } catch(e) {
+            console.error("deriveShared error:", e);
+            throw new Error("Gagal derivasi kunci: " + e.message);
         }
     }
-
-    function switchSetupTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.setup-form').forEach(f => {
-            f.classList.remove('active');
-            f.style.display = 'none';
-        });
-
-        if (tab === 'login') {
-            document.getElementById('tab-btn-login').classList.add('active');
-            const f = document.getElementById('form-login');
-            if(f){ f.classList.add('active'); f.style.display = 'block'; }
-        } else if (tab === 'register') {
-            document.getElementById('tab-btn-register').classList.add('active');
-            const f = document.getElementById('form-register');
-            if(f){ f.classList.add('active'); f.style.display = 'block'; }
-        } else {
-            document.getElementById('tab-btn-import').classList.add('active');
-            const f = document.getElementById('form-import');
-            if(f){ f.classList.add('active'); f.style.display = 'block'; }
-        }
+    async function encryptMsg(key, text) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const enc = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, key, new TextEncoder().encode(text));
+        return { cipher: btoa(String.fromCharCode(...new Uint8Array(enc))), iv: btoa(String.fromCharCode(...iv)) };
+    }
+    async function decryptMsg(key, cipherB64, ivB64) {
+        try {
+            const cipher = Uint8Array.from(atob(cipherB64), c=>c.charCodeAt(0)).buffer;
+            const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0)).buffer;
+            const dec = await crypto.subtle.decrypt({ name:"AES-GCM", iv }, key, cipher);
+            return new TextDecoder().decode(dec);
+        } catch(e) { return "⚠️ Gagal dekripsi"; }
     }
 
+    // ====================== HELPERS =========================
     function showToast(msg) {
-        const toast = document.getElementById('app-toast');
-        toast.innerText = msg;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3000);
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.classList.add('show');
+        clearTimeout(t._hide); t._hide = setTimeout(() => t.classList.remove('show'), 2800);
+    }
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('screen-'+id);
+        if(el) el.classList.add('active');
+    }
+    function escapeHTML(str) { return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t)); }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+            document.getElementById('form-'+this.dataset.tab).classList.add('active');
+        });
+    });
+
+    // ====================== AUTH ============================
+    async function handleRegister() {
+        const name = document.getElementById('reg-name').value.trim();
+        const pin = document.getElementById('reg-pin').value.trim();
+        if(!name) return showToast('Nama tidak boleh kosong');
+        if(!pin || pin.length<4) return showToast('PIN minimal 4 angka');
+        try {
+            showToast('⏳ Membuat akun...');
+            const uid = 'sc-' + crypto.randomUUID().replace(/-/g,'').slice(0,16);
+            const pair = await genKeyPair();
+            const pub = await exportPub(pair.publicKey);
+            await storeKey(uid, pair.privateKey);
+            localStorage.setItem('pin_'+uid, pin);
+            await db.ref('users/'+uid).set({ uid, name, publicKey:pub, createdAt: Date.now() });
+            localStorage.setItem('my_uid', uid);
+            localStorage.setItem('my_name', name);
+            myUID=uid; myName=name; myPrivKey=pair.privateKey; myPubB64=pub;
+            showToast('✅ Akun berhasil!');
+            startApp();
+        } catch(e) { console.error(e); showToast('❌ Gagal daftar'); }
     }
 
-    async function loadOrSetupUser() {
-        const savedUID = localStorage.getItem('chat_my_uid');
-        const savedName = localStorage.getItem('chat_my_name');
-        
-        if (savedUID && savedName) {
-            const storedPrivKey = await getPrivateKey(savedUID);
-            if (storedPrivKey) {
-                myUID = savedUID;
-                myName = savedName;
-                myPrivateKey = storedPrivKey;
-                const snapshot = await db.ref(`users/${myUID}`).once('value');
-                if (snapshot.exists()) {
-                    myPublicKeyB64 = snapshot.val().publicKey;
-                    startAppSession();
+    async function handleLogin() {
+        const input = document.getElementById('login-uid').value.trim();
+        const pin = document.getElementById('login-pin').value.trim();
+        if(!input) return showToast('Masukkan username atau UID');
+        if(!pin) return showToast('Masukkan PIN');
+        try {
+            showToast('⏳ Mencari akun...');
+            let uid = input, userData = null;
+            if(!input.startsWith('sc-')) {
+                const snap = await db.ref('users').once('value');
+                if(snap.exists()) {
+                    for(const [id, val] of Object.entries(snap.val())) {
+                        if((val.name||'').toLowerCase() === input.toLowerCase()) { uid=id; userData=val; break; }
+                    }
+                }
+            } else {
+                const snap = await db.ref('users/'+input).once('value');
+                if(snap.exists()) { userData = snap.val(); }
+            }
+            if(!userData) return showToast('❌ Akun tidak ditemukan');
+            const priv = await getKey(uid);
+            if(!priv) return showToast('⛔ Kunci tidak ada. Impor dulu!');
+            const savedPin = localStorage.getItem('pin_'+uid);
+            if(!savedPin) return showToast('⛔ PIN belum disimpan. Impor ulang!');
+            if(savedPin !== pin) return showToast('❌ PIN salah!');
+            localStorage.setItem('my_uid', uid);
+            localStorage.setItem('my_name', userData.name);
+            myUID=uid; myName=userData.name; myPrivKey=priv; myPubB64=userData.publicKey;
+            showToast('👋 Selamat datang, '+myName);
+            startApp();
+        } catch(e) { console.error(e); showToast('❌ Gagal login'); }
+    }
+
+    async function handleImport() {
+        const uid = document.getElementById('import-uid').value.trim();
+        const keyStr = document.getElementById('import-key').value.trim();
+        const pin = document.getElementById('import-pin').value.trim();
+        if(!uid || !keyStr) return showToast('Isi UID dan kode cadangan');
+        if(!pin || pin.length<4) return showToast('PIN minimal 4 angka');
+        try {
+            let targetUID = uid, targetKey = keyStr;
+            if(keyStr.startsWith('{') && keyStr.endsWith('}')) {
+                const parsed = JSON.parse(keyStr);
+                if(parsed.uid) targetUID = parsed.uid;
+                if(parsed.key) targetKey = parsed.key;
+            }
+            const snap = await db.ref('users/'+targetUID).once('value');
+            if(!snap.exists()) return showToast('❌ UID tidak ada di server');
+            const userData = snap.val();
+            const raw = Uint8Array.from(atob(targetKey), c=>c.charCodeAt(0)).buffer;
+            const priv = await crypto.subtle.importKey("pkcs8", raw, { name:"ECDH", namedCurve:"P-256" }, true, ["deriveKey","deriveBits"]);
+            await storeKey(targetUID, priv);
+            localStorage.setItem('pin_'+targetUID, pin);
+            localStorage.setItem('my_uid', targetUID);
+            localStorage.setItem('my_name', userData.name);
+            myUID=targetUID; myName=userData.name; myPrivKey=priv; myPubB64=userData.publicKey;
+            showToast('✅ Impor berhasil!');
+            startApp();
+        } catch(e) { console.error(e); showToast('❌ Gagal impor'); }
+    }
+
+    async function handleLogout() {
+        if(!confirm('Keluar dari akun?')) return;
+        try {
+            if(myUID) db.ref('userChats/'+myUID).off();
+            if(activeChatId && msgListener) db.ref('chats/'+activeChatId+'/messages').off('child_added', msgListener);
+            localStorage.removeItem('my_uid'); localStorage.removeItem('my_name');
+            myUID=null; myName=null; myPrivKey=null; myPubB64=null; activeChatId=null; activePeer=null;
+            showScreen('setup');
+            showToast('👋 Keluar');
+        } catch(e) { showToast('❌ Gagal keluar'); }
+    }
+
+    // ====================== APP ============================
+    function startApp() {
+        document.getElementById('my-name').textContent = myName;
+        document.getElementById('my-uid').textContent = myUID;
+        document.getElementById('my-avatar').textContent = myName.charAt(0).toUpperCase();
+        const qr = document.getElementById('qrcode');
+        qr.innerHTML = '';
+        new QRCode(qr, { text: myUID, width: 140, height: 140 });
+        listenChats();
+        showScreen('home');
+    }
+
+    function listenChats() {
+        db.ref('userChats/'+myUID).on('value', snap => {
+            const container = document.getElementById('chat-list');
+            if(!snap.exists()) {
+                container.innerHTML = `<div class="empty"><span>💬</span><p>Belum ada obrolan</p></div>`;
+                return;
+            }
+            const items = [];
+            snap.forEach(child => { items.push({ id: child.key, ...child.val() }); });
+            items.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+            container.innerHTML = items.map(chat => `
+                <div class="list-item" onclick="openChat('${chat.id}','${chat.peerUID}','${escapeHTML(chat.peerName)}','${chat.peerPubKey||''}')">
+                    <div class="avatar">${(chat.peerName||'?').charAt(0).toUpperCase()}</div>
+                    <div class="list-info">
+                        <div class="list-name"><span>${escapeHTML(chat.peerName||'Teman')}</span><span class="list-time">${chat.timestamp ? new Date(chat.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</span></div>
+                        <div class="list-preview">${escapeHTML(chat.lastMsg||'🔒 Pesan terenkripsi')}</div>
+                    </div>
+                </div>
+            `).join('');
+        });
+    }
+
+    // ====================== CHAT ==========================
+    async function openChat(chatId, peerUID, peerName, peerPubB64FromMeta) {
+        if(msgListener && activeChatId) {
+            try { db.ref('chats/'+activeChatId+'/messages').off('child_added', msgListener); } catch(e){}
+        }
+        activeChatId = chatId;
+        activePeer = { uid: peerUID, name: peerName };
+        activePeerPub = null;
+        activePeerPubB64 = null;
+
+        document.getElementById('chat-peer-name').textContent = peerName;
+        document.getElementById('chat-peer-avatar').textContent = peerName.charAt(0).toUpperCase();
+        document.getElementById('chat-messages').innerHTML = '';
+        showScreen('chat-room');
+        document.getElementById('chat-peer-status').textContent = '⏳ Memuat kunci...';
+        document.getElementById('chat-peer-dot').className = 'dot offline';
+
+        try {
+            let targetPubB64 = null;
+            const snapUser = await db.ref('users/'+peerUID).once('value');
+            if(snapUser.exists()) {
+                const userData = snapUser.val();
+                if(userData.publicKey) targetPubB64 = userData.publicKey;
+            }
+            if(!targetPubB64 && peerPubB64FromMeta) targetPubB64 = peerPubB64FromMeta;
+            if(!targetPubB64) {
+                document.getElementById('chat-peer-status').textContent = '⚠️ Kunci publik tidak ditemukan';
+                document.getElementById('chat-peer-dot').className = 'dot offline';
+                showToast('❌ Kunci publik lawan tidak tersedia');
+                return;
+            }
+            const peerPubKey = await importPub(targetPubB64);
+            const sharedKey = await deriveShared(myPrivKey, peerPubKey);
+            activePeerPub = sharedKey;
+            activePeerPubB64 = targetPubB64;
+            document.getElementById('chat-peer-status').textContent = '🔒 E2EE Aktif';
+            document.getElementById('chat-peer-dot').className = 'dot online';
+            showToast('🔐 Kunci aman terjalin');
+        } catch(err) {
+            console.error("Gagal setup E2EE:", err);
+            document.getElementById('chat-peer-status').textContent = '⚠️ Kunci tidak cocok - ' + err.message;
+            document.getElementById('chat-peer-dot').className = 'dot offline';
+            activePeerPub = null;
+        }
+
+        msgListener = db.ref('chats/'+activeChatId+'/messages').on('child_added', async snap => {
+            const data = snap.val();
+            let text = data.text || '🔒 Terenkripsi';
+            if(data.cipher && data.iv && activePeerPub) {
+                text = await decryptMsg(activePeerPub, data.cipher, data.iv);
+            } else if(data.cipher && data.iv) {
+                text = '⚠️ Tidak bisa dekripsi (kunci tidak tersedia)';
+            }
+            const isMine = data.sender === myUID;
+            const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `msg ${isMine ? 'sent' : 'received'}`;
+            if(!isMine) {
+                const senderName = data.sender === myUID ? myName : (activePeer.name || 'Teman');
+                div.innerHTML = `<span class="sender">${escapeHTML(senderName)}</span>${escapeHTML(text)}<span class="time">${time}</span>`;
+            } else {
+                div.innerHTML = `${escapeHTML(text)}<span class="time">${time}</span>`;
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+
+    function closeChat() {
+        if(msgListener && activeChatId) {
+            try { db.ref('chats/'+activeChatId+'/messages').off('child_added', msgListener); } catch(e){}
+        }
+        activeChatId = null; activePeer = null; activePeerPub = null;
+        showScreen('home');
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if(!text || !activeChatId) return;
+        input.value = ''; document.getElementById('send-btn').disabled = true;
+        try {
+            const now = Date.now();
+            let payload = { sender: myUID, timestamp: now };
+            if(activePeerPub) {
+                const enc = await encryptMsg(activePeerPub, text);
+                payload.cipher = enc.cipher;
+                payload.iv = enc.iv;
+            } else {
+                payload.text = text;
+            }
+            await db.ref('chats/'+activeChatId+'/messages').push().set(payload);
+            const meta = {
+                lastMsg: text,
+                timestamp: now,
+                peerUID: activePeer.uid,
+                peerName: activePeer.name,
+                peerPubKey: activePeerPubB64 || ''
+            };
+            await db.ref('userChats/'+myUID+'/'+activeChatId).update(meta);
+            await db.ref('userChats/'+activePeer.uid+'/'+activeChatId).update({
+                lastMsg: text,
+                timestamp: now,
+                peerUID: myUID,
+                peerName: myName,
+                peerPubKey: myPubB64 || ''
+            });
+        } catch(e) { console.error(e); showToast('❌ Gagal kirim'); }
+    }
+
+    async function startNewChat() {
+        const input = document.getElementById('peer-uid').value.trim();
+        if(!input) return showToast('Masukkan UID teman');
+        try {
+            let peer = null;
+            if(input.startsWith('sc-')) {
+                const snap = await db.ref('users/'+input).once('value');
+                if(snap.exists()) peer = snap.val();
+            } else {
+                const snap = await db.ref('users').once('value');
+                if(snap.exists()) {
+                    for(const [id, val] of Object.entries(snap.val())) {
+                        if((val.name||'').toLowerCase() === input.toLowerCase()) { peer = val; break; }
+                    }
+                }
+            }
+            if(!peer) return showToast('❌ Teman tidak ditemukan');
+            if(peer.uid === myUID) return showToast('Tidak bisa chat sendiri');
+            const chatId = myUID < peer.uid ? myUID+'_'+peer.uid : peer.uid+'_'+myUID;
+            document.getElementById('peer-uid').value = '';
+            openChat(chatId, peer.uid, peer.name, peer.publicKey);
+        } catch(e) { showToast('❌ Gagal mencari'); }
+    }
+
+    function copyUID() {
+        if(!myUID) return;
+        navigator.clipboard.writeText(myUID).then(() => showToast('📋 UID disalin!')).catch(() => showToast('❌ Gagal salin'));
+    }
+
+    async function exportKey() {
+        if(!myPrivKey) return;
+        try {
+            const raw = await crypto.subtle.exportKey('pkcs8', myPrivKey);
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(raw)));
+            const json = JSON.stringify({ uid: myUID, name: myName, key: b64 });
+            await navigator.clipboard.writeText(json);
+            alert('✅ Kunci cadangan disalin ke clipboard.\nSimpan di tempat aman!');
+        } catch(e) { showToast('❌ Gagal ekspor'); }
+    }
+
+    // ====================== INIT ============================
+    (async function init() {
+        const savedUID = localStorage.getItem('my_uid');
+        const savedName = localStorage.getItem('my_name');
+        if(savedUID && savedName) {
+            const priv = await getKey(savedUID);
+            if(priv) {
+                const snap = await db.ref('users/'+savedUID).once('value');
+                if(snap.exists()) {
+                    const data = snap.val();
+                    myUID=savedUID; myName=savedName; myPrivKey=priv; myPubB64=data.publicKey;
+                    startApp();
                     return;
                 }
             }
         }
         showScreen('setup');
-    }
-
-    async function handleRegister() {
-        const nameInput = document.getElementById('reg-name').value.trim();
-        const pinInput = document.getElementById('reg-pin').value.trim();
-
-        if (!nameInput) return showToast('Nama Pengguna tidak boleh kosong!');
-        if (!pinInput || pinInput.length < 4) return showToast('PIN minimal 4 angka!');
-
-        try {
-            showToast('🔄 Membuat Pasangan Kunci...');
-            const newUID = 'sc-' + Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11);
-            const keyPair = await generateKeyPair();
-            const pubKeyB64 = await exportPublicKey(keyPair.publicKey);
-
-            await storePrivateKey(newUID, keyPair.privateKey);
-            localStorage.setItem('chat_pin_' + newUID, pinInput);
-
-            await db.ref(`users/${newUID}`).set({
-                uid: newUID,
-                name: nameInput,
-                publicKey: pubKeyB64,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
-
-            localStorage.setItem('chat_my_uid', newUID);
-            localStorage.setItem('chat_my_name', nameInput);
-
-            myUID = newUID;
-            myName = nameInput;
-            myPrivateKey = keyPair.privateKey;
-            myPublicKeyB64 = pubKeyB64;
-
-            showToast('✅ Akun Berhasil Dibuat!');
-            startAppSession();
-        } catch (err) {
-            console.error(err);
-            showToast('❌ Pendaftaran Gagal.');
-        }
-    }
-
-    
-    
-    
-    async function handleImportKey() {
-        const uidInput = document.getElementById("import-uid").value.trim();
-        const keyInput = document.getElementById("import-key-str").value.trim();
-
-        let targetUID = uidInput;
-        let targetKey = keyInput;
-
-        // Jika user menempelkan teks JSON lengkap dari hasil Backup
-        if (keyInput.startsWith("{") && keyInput.endsWith("}")) {
-            try {
-                const parsed = JSON.parse(keyInput);
-                if (parsed.uid) targetUID = parsed.uid;
-                if (parsed.key) targetKey = parsed.key;
-            } catch(e) {
-                return showToast("❌ Format JSON kode cadangan tidak valid!");
-            }
-        }
-
-        if (!targetUID || !targetKey) return showToast("Isi UID dan Kode Cadangan!");
-
-        try {
-            showToast("🔄 Mengimpor Kunci Privat ke perangkat...");
-            const buf = b64Decode(targetKey);
-            
-            // Import kunci privat ke format WebCrypto
-            const importedPrivKey = await window.crypto.subtle.importKey(
-                "pkcs8", 
-                buf, 
-                { name: "ECDH", namedCurve: "P-256" }, 
-                true, 
-                ["deriveKey", "deriveBits"]
-            );
-            
-            // Cek keberadaan user di Firebase
-            const snapshot = await db.ref('users/' + targetUID).once("value");
-            if (!snapshot.exists()) return showToast("❌ UID tidak ditemukan di database server!");
-
-            const userData = snapshot.val();
-
-            // SINKRONISASI KUNCI KE INTERNAL DEVICE (IndexedDB)
-            await storePrivateKey(targetUID, importedPrivKey);
-
-            // Simpan identitas aktif
-            localStorage.setItem("chat_my_uid", userData.uid);
-            localStorage.setItem("chat_my_name", userData.name);
-
-            myUID = userData.uid;
-            myName = userData.name;
-            myPrivateKey = importedPrivKey;
-            myPublicKeyB64 = userData.publicKey;
-
-            alert("✅ IMPOR BERHASIL!\n\nKunci privat sudah tersimpan di HP ini. Selanjutnya Anda bisa Login hanya menggunakan Username & PIN.");
-            startAppSession();
-        } catch (err) {
-            console.error(err);
-            showToast("❌ Gagal Impor Kunci: Kode/Format Kunci Salah!");
-        }
-    }
-
-    async function handleLogin() {
-        const userInput = document.getElementById('login-uid').value.trim().toLowerCase();
-        const pinInput = document.getElementById('login-pin').value.trim();
-
-        if (!userInput) return showToast('Masukkan Username atau UID Anda!');
-        if (!pinInput) return showToast('Masukkan PIN Anda!');
-
-        try {
-            showToast('🔄 Memeriksa identitas...');
-            let targetUID = null;
-            let userData = null;
-
-            if (userInput.startsWith('sc-')) {
-                targetUID = userInput;
-            } else {
-                const snapshot = await db.ref('users').once('value');
-                if (snapshot.exists()) {
-                    const allUsers = snapshot.val();
-                    for (let id in allUsers) {
-                        const dbName = (allUsers[id].name || '').trim().toLowerCase();
-                        if (dbName === userInput) {
-                            targetUID = id;
-                            userData = allUsers[id];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!targetUID) return showToast('❌ Username / UID tidak ditemukan!');
-
-            if (!userData) {
-                const snap = await db.ref('users/' + targetUID).once('value');
-                if (snap.exists()) userData = snap.val();
-            }
-
-            if (!userData) return showToast('❌ Data akun tidak ada di server!');
-
-            // Periksa ketersediaan Kunci Privat di memori HP
-            const localPrivKey = await getPrivateKey(targetUID);
-            if (!localPrivKey) {
-                alert('⛔ KUNCI TIDAK DITEMUKAN!\n\nHP ini belum memiliki Kunci Privat untuk akun "' + userData.name + '".\n\nSilakan lakukan IMPOR KUNCI sekali saja agar HP ini terverifikasi.');
-                return showToast('⛔ Akses Ditolak: Perangkat Belum Terverifikasi.');
-            }
-
-            const savedPin = localStorage.getItem('chat_pin_' + targetUID);
-            if (savedPin && savedPin !== pinInput) {
-                return showToast('❌ PIN yang Anda masukkan Salah!');
-            }
-
-            localStorage.setItem('chat_my_uid', userData.uid);
-            localStorage.setItem('chat_my_name', userData.name);
-
-            myUID = userData.uid;
-            myName = userData.name;
-            myPrivateKey = localPrivKey;
-            myPublicKeyB64 = userData.publicKey;
-
-            showToast(`✅ Masuk berhasil! Selamat datang, ${myName}!`);
-            startAppSession();
-        } catch (err) {
-            console.error(err);
-            showToast('❌ Login Gagal.');
-        }
-    }
-
-
-
-
-    
-
-    
-    async function handleLogout() {
-        if (confirm("Apakah Anda yakin ingin keluar dari sesi ini?")) {
-            try {
-                if (myUID) {
-                    try { db.ref('userChats/' + myUID).off(); } catch(e){}
-                }
-                
-                // HANYA hapus sesi aktif di localStorage, JANGAN hapus Kunci Privat dari IndexedDB
-                localStorage.removeItem("chat_my_uid");
-                localStorage.removeItem("chat_my_name");
-
-                myUID = null; 
-                myName = null; 
-                myPrivateKey = null; 
-                myPublicKeyB64 = null;
-                activeChatId = null; 
-                activePeerUID = null; 
-                activePeerPubKey = null;
-                
-                showScreen('setup');
-                switchSetupTab('login');
-                showToast('✅ Berhasil keluar. Kunci tetap tersimpan di HP ini.');
-            } catch (err) {
-                console.error(err);
-                showToast('❌ Gagal keluar.');
-            }
-        }
-    }
-
-
-    async function handleCopyUID() {
-        if (!myUID) return;
-        try {
-            await navigator.clipboard.writeText(myUID);
-            showToast('📋 UID Berhasil Disalin!');
-        } catch (err) {
-            showToast('❌ Gagal menyalin UID.');
-        }
-    }
-
-    async function handleExportKey() {
-        if (!myPrivateKey || !myUID) return;
-        try {
-            const exported = await window.crypto.subtle.exportKey('pkcs8', myPrivateKey);
-            const keyB64 = b64Encode(exported);
-            const fullBackup = JSON.stringify({ uid: myUID, name: myName, key: keyB64 });
-            await navigator.clipboard.writeText(fullBackup);
-            alert('✅ Cadangan Kunci Berhasil Disalin!\n\nSimpan teks ini di tempat aman:\n\n' + fullBackup);
-        } catch (err) {
-            showToast('❌ Gagal mengekspor kunci.');
-        }
-    }
-
-    function openProfileScreen() {
-        showScreen('profile');
-        renderMyQRCode();
-    }
-
-    function renderMyQRCode() {
-        const container = document.getElementById("qrcode-container");
-        if (container && myUID) {
-            container.innerHTML = "";
-            new QRCode(container, { text: myUID, width: 140, height: 140 });
-        }
-    }
-
-    function startAppSession() {
-        document.getElementById('my-profile-name').innerText = myName;
-        document.getElementById('my-uid-display').innerText = myUID;
-        document.getElementById('my-avatar-char').innerText = myName.charAt(0).toUpperCase();
-        listenRecentChats();
-        showScreen('home');
-    }
-
-    function listenRecentChats() {
-        db.ref(`userChats/${myUID}`).on('value', async (snapshot) => {
-            const container = document.getElementById('chat-list-container');
-            if (!snapshot.exists()) {
-                container.innerHTML = `<div class="empty-state"><span>💬</span><h3>Belum ada obrolan</h3></div>`;
-                return;
-            }
-            container.innerHTML = '';
-            const items = [];
-            snapshot.forEach((child) => { items.push({ id: child.key, ...child.val() }); });
-            items.sort((a, b) => b.timestamp - a.timestamp);
-
-            for (let chat of items) {
-                const div = document.createElement('div');
-                div.className = 'chat-list-item';
-                div.onclick = () => openChat(chat.id, chat.peerUID, chat.peerName, chat.peerPubKey);
-                const timeStr = chat.timestamp ? new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-                div.innerHTML = `
-                    <div class="avatar">${chat.peerName.charAt(0).toUpperCase()}</div>
-                    <div class="chat-info">
-                        <div class="chat-meta"><span class="chat-name">${chat.peerName}</span><span class="chat-time">${timeStr}</span></div>
-                        <div class="chat-preview">${chat.lastMsg || '🔒 Pesan Terenkripsi'}</div>
-                    </div>`;
-                container.appendChild(div);
-            }
-        });
-    }
-
-    
-    
-    async function startNewChat() {
-        const userInput = document.getElementById('peer-uid-input').value.trim();
-        if (!userInput) return showToast('Masukkan Username atau UID target!');
-        
-        try {
-            showToast('🔄 Mencari teman...');
-            let peer = null;
-
-            // 1. Jika input diawali 'sc-', cari langsung berdasarkan UID
-            if (userInput.startsWith('sc-')) {
-                const snapshot = await db.ref('users/' + userInput).once('value');
-                if (snapshot.exists()) {
-                    peer = snapshot.val();
-                }
-            } else {
-                // 2. Jika input berupa Username, cari berdasarkan Nama (case-insensitive)
-                const snapshot = await db.ref('users').once('value');
-                if (snapshot.exists()) {
-                    const allUsers = snapshot.val();
-                    for (let id in allUsers) {
-                        const dbName = (allUsers[id].name || '').trim().toLowerCase();
-                        if (dbName === userInput.toLowerCase()) {
-                            peer = allUsers[id];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!peer) return showToast('❌ Username / UID teman tidak ditemukan!');
-            if (peer.uid === myUID) return showToast('Tidak bisa obrolan dengan diri sendiri!');
-
-            const newChatId = myUID < peer.uid ? `${myUID}_${peer.uid}` : `${peer.uid}_${myUID}`;
-            document.getElementById('peer-uid-input').value = '';
-            openChat(newChatId, peer.uid, peer.name, peer.publicKey);
-        } catch (err) {
-            console.error(err);
-            showToast('❌ Gagal mencari kontak.');
-        }
-    }
-
-
-
-    
-
-    function renderMessageBubble(text, senderUID, timestamp) {
-        const container = document.getElementById('chat-messages-container');
-        const bubble = document.createElement('div');
-        bubble.className = `msg-bubble ${senderUID === myUID ? 'sent' : 'received'}`;
-        const timeStr = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        bubble.innerHTML = `${escapeHTML(text)}<span class="msg-time">${timeStr}</span>`;
-        container.appendChild(bubble);
-        container.scrollTop = container.scrollHeight;
-    }
-
-    
-    
-    
-    let activePeerPubKeyB64 = null;
-
-    
-    
-    
-
-
-
-    
-    async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
-        if (chatMsgListener && activeChatId) {
-            try { db.ref('chats/' + activeChatId + '/messages').off('child_added', chatMsgListener); } catch(e){}
-        }
-
-        activeChatId = chatId; 
-        activePeerUID = peerUID; 
-        activePeerName = peerName;
-        activePeerPubKey = null;
-
-        document.getElementById('chat-room-title').innerText = peerName;
-        document.getElementById('chat-messages-container').innerHTML = '';
-        
-        // Tampilkan layar obrolan DULUAN agar UI & kolom input selalu muncul
-        showScreen('chat-room');
-
-        const statusEl = document.getElementById('chat-e2ee-status');
-
-        try {
-            let targetPubKeyB64 = peerPubKeyB64;
-            if (!targetPubKeyB64) {
-                const snap = await db.ref('users/' + peerUID).once('value');
-                if (snap.exists()) {
-                    targetPubKeyB64 = snap.val().publicKey;
-                }
-            }
-
-            if (targetPubKeyB64 && myPrivateKey) {
-                activePeerPubKeyB64 = targetPubKeyB64;
-                const importedPeerPubKey = await importPublicKey(targetPubKeyB64);
-                activePeerPubKey = await deriveSharedKey(myPrivateKey, importedPeerPubKey);
-                if (statusEl) { statusEl.innerText = "🔒 E2EE Active"; statusEl.style.color = "var(--success)"; }
-            } else {
-                if (statusEl) { statusEl.innerText = "⚠️ Non-E2EE (Kunci lawan belum siap)"; statusEl.style.color = "var(--danger)"; }
-            }
-        } catch (err) {
-            console.error("E2EE Derivation Error:", err);
-            if (statusEl) { statusEl.innerText = "⚠️ Non-E2EE (Format Kunci Salah)"; statusEl.style.color = "var(--danger)"; }
-        }
-
-        // Pasang pendengar pesan realtime
-        chatMsgListener = db.ref('chats/' + activeChatId + '/messages').on('child_added', async (snapshot) => {
-            const msgData = snapshot.val();
-            let plainText = msgData.text || "🔒 Pesan Terenkripsi";
-            
-            if (msgData.cipher && msgData.iv) {
-                if (activePeerPubKey) {
-                    plainText = await decryptMessage(activePeerPubKey, msgData.cipher, msgData.iv);
-                } else {
-                    plainText = "⚠️ [Gagal Dekripsi: Kunci Tidak Cocok]";
-                }
-            }
-            renderMessageBubble(plainText, msgData.sender, msgData.timestamp);
-        });
-    }
-
-    async function sendMessage() {
-        const inputEl = document.getElementById('message-input');
-        const text = inputEl.value.trim();
-        if (!text || !activeChatId) return;
-        inputEl.value = '';
-        document.getElementById('send-btn').disabled = true;
-
-        try {
-            const now = firebase.database.ServerValue.TIMESTAMP;
-            let payload = { sender: myUID, timestamp: now };
-
-            if (activePeerPubKey) {
-                const encData = await encryptMessage(activePeerPubKey, text);
-                payload.cipher = encData.cipher;
-                payload.iv = encData.iv;
-            } else {
-                payload.text = text; // Fallback jika lawan belum punya kunci E2EE sah
-            }
-
-            await db.ref('chats/' + activeChatId + '/messages').push().set(payload);
-
-            const myChatMeta = { lastMsg: text, timestamp: now, peerUID: activePeerUID, peerName: activePeerName, peerPubKey: activePeerPubKeyB64 || '' };
-            const peerChatMeta = { lastMsg: text, timestamp: now, peerUID: myUID, peerName: myName, peerPubKey: myPublicKeyB64 || '' };
-
-            await db.ref('userChats/' + myUID + '/' + activeChatId).update(myChatMeta);
-            await db.ref('userChats/' + activePeerUID + '/' + activeChatId).update(peerChatMeta);
-
-        } catch (err) {
-            console.error(err);
-            showToast('❌ Gagal mengirim pesan.');
-        }
-    }
-
-
-
-
-
-    function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
-
-    const msgInput = document.getElementById('message-input');
-    if(msgInput) {
-        msgInput.addEventListener('input', function() { document.getElementById('send-btn').disabled = this.value.trim() === ''; });
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        if (!initFirebase()) return;
-        await loadOrSetupUser();
-    });
-    </script>
+    })();
+</script>
 </body>
 </html>

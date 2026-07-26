@@ -1,5 +1,5 @@
 // Service Worker untuk SecureChat PWA (Diperbarui)
-const CACHE_NAME = 'securechat-v11'; // Versi dinaikkan untuk membersihkan cache lama
+const CACHE_NAME = 'securechat-v11';
 const urlsToCache = [
     './',
     './index.html',
@@ -10,7 +10,6 @@ const urlsToCache = [
     'https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js'
 ];
 
-// 1. Tahap Install: Simpan aset utama ke cache
 self.addEventListener('install', event => {
     console.log('[SW] Install Event: Mencache aset inti');
     event.waitUntil(
@@ -22,7 +21,6 @@ self.addEventListener('install', event => {
     );
 });
 
-// 2. Tahap Activate: Bersihkan cache versi lama secara otomatis
 self.addEventListener('activate', event => {
     console.log('[SW] Activate Event: Membersihkan cache usang');
     event.waitUntil(
@@ -37,17 +35,13 @@ self.addEventListener('activate', event => {
     );
 });
 
-// 3. Tahap Fetch: Strategi Stale-While-Revalidate untuk performa kilat & selalu terperbarui
 self.addEventListener('fetch', event => {
-    // Abaikan permintaan yang bukan HTTP/HTTPS (seperti ekstensi browser atau Firebase WebSocket)
     if (!event.request.url.startsWith(self.location.origin) && !event.request.url.startsWith('https://')) {
         return;
     }
 
-    // Strategi khusus untuk dokumen HTML utama atau aset lokal
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            // Jalankan pengambilan data dari jaringan di latar belakang
             const fetchPromise = fetch(event.request).then(networkResponse => {
                 if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const responseToCache = networkResponse.clone();
@@ -56,14 +50,10 @@ self.addEventListener('fetch', event => {
                     });
                 }
                 return networkResponse;
-            }).catch(() => {
-                // Tangani kegagalan jaringan secara diam-diam jika data sudah ada di cache
-            });
+            }).catch(() => {});
 
-            // Kembalikan respons dari cache dengan segera (jika ada), atau tunggu dari jaringan
             return cachedResponse || fetchPromise;
         }).catch(() => {
-            // Fallback jika benar-benar offline dan item tidak ada di cache
             if (event.request.mode === 'navigate') {
                 return caches.match('./index.html');
             }
@@ -72,7 +62,6 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// 4. Listeners Push Notification (Opsional)
 self.addEventListener('push', event => {
     if (event.data) {
         try {
