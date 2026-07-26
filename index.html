@@ -708,6 +708,7 @@
     }
 
     
+    
     async function startNewChat() {
         const userInput = document.getElementById('peer-uid-input').value.trim();
         if (!userInput) return showToast('Masukkan Username atau UID target!');
@@ -750,6 +751,7 @@
     }
 
 
+
     async function openChat(chatId, peerUID, peerName, peerPubKeyB64) {
         if (chatMsgListener && activeChatId) db.ref(`chats/${activeChatId}/messages`).off('child_added', chatMsgListener);
         activeChatId = chatId; activePeerUID = peerUID; activePeerName = peerName;
@@ -782,6 +784,7 @@
     }
 
     
+    
     async function sendMessage() {
         const inputEl = document.getElementById('message-input');
         const text = inputEl.value.trim();
@@ -812,6 +815,7 @@
             showToast('❌ Gagal mengirim pesan.');
         }
     }
+
 
 
     function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
